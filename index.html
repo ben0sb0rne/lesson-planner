@@ -1,0 +1,3714 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lesson Planner</title>
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-title" content="Lesson Planner">
+<!-- Inline SVG favicon: keeps the app a single portable file. Reads as a
+     planner grid at 16px rather than turning into mush. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563eb'/%3E%3Crect x='13' y='15' width='38' height='36' rx='5' fill='%23ffffff'/%3E%3Crect x='13' y='15' width='38' height='9' rx='5' fill='%231d4ed8'/%3E%3Crect x='13' y='20' width='38' height='4' fill='%231d4ed8'/%3E%3Crect x='19' y='30' width='10' height='6' rx='2' fill='%232563eb'/%3E%3Crect x='34' y='30' width='10' height='6' rx='2' fill='%23bfdbfe'/%3E%3Crect x='19' y='40' width='10' height='6' rx='2' fill='%23bfdbfe'/%3E%3Crect x='34' y='40' width='10' height='6' rx='2' fill='%23f97316'/%3E%3C/svg%3E">
+<style>
+/* ─────────────────────────── Theme ─────────────────────────── */
+:root{
+  --bg:#faf9f7; --surface:#fff; --surface-2:#f4f2ef; --border:#e5e1db;
+  --border-strong:#d3cec6; --text:#1f1d1a; --muted:#6b665e; --faint:#9c968c;
+  --accent:#2563eb; --warn:#d97706;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.05);
+  --radius:10px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#1a1917; --surface:#232120; --surface-2:#2b2927; --border:#35322e;
+    --border-strong:#454039; --text:#f0ede8; --muted:#9a938a; --faint:#6f6960;
+    --warn:#f59e0b;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text); font-family:var(--font);
+  font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input{font:inherit;color:inherit}
+body.dragging{cursor:grabbing!important; user-select:none}
+body.dragging *{cursor:grabbing!important}
+
+/* ─────────────────────────── Top bar ─────────────────────────── */
+.topbar{
+  display:flex; align-items:center; gap:16px; padding:10px 18px;
+  background:var(--surface); border-bottom:1px solid var(--border); flex:0 0 auto;
+}
+.brand{font-weight:650; letter-spacing:-.01em; font-size:15px; white-space:nowrap}
+.brand small{color:var(--faint); font-weight:500; margin-left:7px; font-size:11px;
+  text-transform:uppercase; letter-spacing:.08em}
+.spacer{flex:1}
+
+.segmented{display:flex; background:var(--surface-2); border-radius:8px; padding:3px; gap:2px}
+.segmented button{
+  padding:5px 15px; border-radius:6px; font-size:13px; color:var(--muted); font-weight:500;
+}
+.segmented button:hover{color:var(--text)}
+.segmented button.on{background:var(--surface); color:var(--text); box-shadow:var(--shadow); font-weight:600}
+
+.icons{display:flex; gap:2px; align-items:center}
+.ico{
+  width:32px; height:32px; border-radius:8px; display:grid; place-items:center;
+  color:var(--muted);
+}
+.ico:hover{background:var(--surface-2); color:var(--text)}
+.ico svg{width:17px; height:17px; fill:none; stroke:currentColor;
+  stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+
+.iconbtn{
+  padding:6px 11px; border-radius:7px; border:1px solid var(--border);
+  color:var(--muted); font-size:12.5px; font-weight:500; white-space:nowrap;
+}
+.iconbtn:hover{background:var(--surface-2); color:var(--text)}
+
+/* ─────────────────────────── Class tabs ─────────────────────────── */
+.tabs{
+  display:flex; align-items:center; gap:2px; padding:0 18px;
+  background:var(--surface); border-bottom:1px solid var(--border); flex:0 0 auto;
+}
+.tab{
+  position:relative; padding:9px 15px 10px; font-size:13.5px; font-weight:550;
+  color:var(--muted); display:flex; align-items:center; gap:7px; white-space:nowrap;
+}
+.tab:hover{color:var(--text)}
+.tab .dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:0 0 auto}
+.tab .dots{display:flex; gap:2px; flex:0 0 auto}
+.tab .dots i{width:5px;height:5px;border-radius:50%;display:block}
+.tab.on{color:var(--text)}
+.tab.on::after{
+  content:''; position:absolute; left:8px; right:8px; bottom:-1px; height:2px;
+  background:var(--c); border-radius:2px 2px 0 0;
+}
+.tab.sep{margin-left:10px; padding-left:20px; border-left:1px solid var(--border)}
+
+/* ─────────────────────────── Sub bar ─────────────────────────── */
+.subbar{
+  display:flex; align-items:center; gap:10px; padding:9px 18px;
+  border-bottom:1px solid var(--border); flex:0 0 auto; background:var(--bg);
+}
+.navbtn{
+  width:27px;height:27px;border-radius:7px;border:1px solid var(--border);
+  display:grid;place-items:center;color:var(--muted);font-size:14px;
+}
+.navbtn:hover{background:var(--surface); color:var(--text)}
+.period{display:flex; align-items:baseline; gap:9px; font-weight:620; font-size:14.5px;
+  letter-spacing:-.01em; white-space:nowrap}
+.period .wk{
+  font-size:11px; font-weight:650; color:var(--faint); letter-spacing:.05em;
+  text-transform:uppercase; border:1px solid var(--border); border-radius:20px;
+  padding:1px 8px; white-space:nowrap;
+}
+.overflowpill,.warnpill{
+  font-size:12px; font-weight:560; color:var(--warn); border:1px solid var(--warn);
+  padding:3px 9px; border-radius:20px; background:color-mix(in srgb,var(--warn) 10%,transparent);
+}
+.warnpill{margin-right:8px}
+.warnpill:hover{background:color-mix(in srgb,var(--warn) 20%,transparent)}
+
+/* ─────────────────────────── Scroll area ─────────────────────────── */
+.stage{flex:1; overflow:auto; padding:18px}
+
+/* ─────────────────────────── Week grid ─────────────────────────── */
+.weekgrid{display:grid; gap:10px; align-items:start; min-width:min-content}
+.rowlabels{display:flex; flex-direction:column; gap:8px; position:sticky; left:0; z-index:3}
+.rowlabels .rl-spacer{height:var(--headh)}
+.rowlabel{
+  display:flex; align-items:center; gap:6px; padding:8px 9px; height:var(--rowh);
+  background:var(--surface); border:1px solid var(--border); border-radius:8px;
+  font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase;
+  letter-spacing:.05em; cursor:grab; user-select:none;
+}
+.rowlabel:hover{border-color:var(--border-strong); color:var(--text)}
+.rowlabel.dragging{opacity:.4}
+.rowlabel.over{border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent)}
+.rowlabel .grip{color:var(--faint); font-size:13px; letter-spacing:-2px}
+.rowlabel .txt{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.rowlabel .x{opacity:0; color:var(--faint); font-size:15px; padding:0 2px}
+.rowlabel:hover .x{opacity:1}
+.rowlabel .x:hover{color:#dc2626}
+.addrowmini{
+  align-self:flex-start; margin-top:2px; padding:4px 9px; border-radius:6px;
+  font-size:11.5px; font-weight:600; color:var(--faint); letter-spacing:.03em;
+}
+.addrowmini:hover{background:var(--surface-2); color:var(--text)}
+
+.daycol{position:relative; display:flex; flex-direction:column; gap:8px}
+.daycol.drag-src{opacity:.35}
+.daycol.swap-target .dayhead,.daycol.swap-target .cell{
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 20%,transparent);
+}
+
+.dayhead{
+  height:var(--headh); background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:8px 10px; display:flex; flex-direction:column;
+  gap:5px; position:relative;
+}
+.dayhead:hover{border-color:var(--border-strong)}
+.dayhead .top{display:flex; align-items:baseline; gap:7px}
+.dayhead .dow{font-weight:680; font-size:13px; letter-spacing:-.01em}
+.dayhead .date{color:var(--faint); font-size:11.5px}
+.dayhead .grip{
+  position:absolute; top:5px; right:26px; opacity:.38; color:var(--faint);
+  padding:3px 4px; border-radius:5px; font-size:12px; line-height:1; cursor:grab;
+  letter-spacing:-2px; touch-action:none;
+}
+.dayhead:hover .grip{opacity:1}
+.dayhead .grip:hover{background:var(--surface-2); color:var(--text)}
+.dayhead .more{
+  position:absolute; top:5px; right:6px; opacity:0; color:var(--faint);
+  padding:2px 5px; border-radius:5px; font-size:14px; line-height:1;
+}
+.dayhead:hover .more{opacity:1}
+.dayhead .more:hover{background:var(--surface-2); color:var(--text)}
+.title{
+  width:100%; border:none; background:transparent; padding:1px 0; font-size:13.5px;
+  font-weight:600; letter-spacing:-.01em; outline:none;
+}
+.title::placeholder{color:var(--faint); font-weight:500}
+.tagrow{display:flex; align-items:center; gap:5px}
+.tagpill{
+  font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  padding:2px 7px; border-radius:20px; color:#fff; background:var(--t);
+}
+.tagpill.none{background:transparent; color:var(--faint); border:1px dashed var(--border-strong)}
+
+.cell{
+  height:var(--rowh); background:var(--surface); border:1px solid var(--border);
+  border-radius:8px; padding:7px 9px; overflow:auto; outline:none; font-size:13px;
+}
+.cell:hover{border-color:var(--border-strong)}
+.cell:focus{border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
+.cell ul,.cell ol{margin:2px 0; padding-left:19px}
+.cell p{margin:0 0 3px}
+
+.offcol{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:14px 10px; gap:6px;
+  background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 8px,transparent 8px,transparent 16px);
+  border:1px dashed var(--border-strong); border-radius:var(--radius); color:var(--muted);
+}
+.offcol b{font-size:12.5px; color:var(--text)}
+.offcol span{font-size:11px; color:var(--faint)}
+.offcol button{
+  font-size:11.5px; font-weight:600; color:var(--accent); padding:3px 8px;
+  border-radius:6px; border:1px solid var(--border-strong); background:var(--surface);
+}
+.offcol button:hover{background:var(--surface-2)}
+
+/* ─────────────────────────── Drag overlay ─────────────────────────── */
+#dragCaret{
+  position:fixed; width:3px; background:var(--accent); border-radius:2px;
+  pointer-events:none; z-index:200; display:none;
+}
+/* Added a frame after the caret first appears, so it slides between seams
+   instead of popping — the motion is what tells the eye it moved. */
+#dragCaret.slide{transition:left .09s ease-out, opacity .09s}
+#dragCaret::before,#dragCaret::after{
+  content:''; position:absolute; left:50%; transform:translateX(-50%);
+  border-left:5px solid transparent; border-right:5px solid transparent;
+}
+#dragCaret::before{top:-1px; border-top:6px solid var(--accent)}
+#dragCaret::after{bottom:-1px; border-bottom:6px solid var(--accent)}
+#dragGhost{
+  position:fixed; pointer-events:none; z-index:201; opacity:.85; display:none;
+  transform:rotate(-1.2deg); box-shadow:0 8px 24px rgba(0,0,0,.22);
+  border-radius:var(--radius); overflow:hidden;
+}
+#dragLabel{
+  position:fixed; pointer-events:none; z-index:202; display:none;
+  background:var(--text); color:var(--bg); font-size:12px; font-weight:620;
+  padding:6px 11px; border-radius:7px; white-space:nowrap; box-shadow:var(--shadow);
+  line-height:1.35;
+}
+#dragLabel .sub{font-weight:480; font-size:11px; opacity:.72}
+#dragLabel.dim{opacity:.6}
+
+/* ─────────────────────────── Day view ─────────────────────────── */
+.dayview{max-width:820px; margin:0 auto; display:flex; flex-direction:column; gap:12px}
+.dayview .card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px}
+.dayview .hd{display:flex; align-items:baseline; gap:10px; margin-bottom:12px}
+.dayview .hd h2{margin:0; font-size:19px; letter-spacing:-.02em}
+.dayview .lbl{
+  font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;
+  letter-spacing:.07em; margin-bottom:5px;
+}
+.dayview .cell{height:auto; min-height:74px}
+.dayview .title{font-size:17px}
+.dayview .card.cls{border-left:3px solid var(--c)}
+
+/* ─────────────────────────── Month view ─────────────────────────── */
+.month{display:grid; grid-template-columns:repeat(5,1fr); gap:7px; min-width:640px}
+.month .dow{
+  text-align:center; font-size:11px; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.07em; padding-bottom:2px;
+}
+.mcell{
+  min-height:88px; background:var(--surface); border:1px solid var(--border);
+  border-radius:9px; padding:7px 9px; display:flex; flex-direction:column; gap:4px;
+  cursor:pointer; overflow:hidden;
+}
+.mcell:hover{border-color:var(--border-strong)}
+.mcell.off{background:transparent; border-style:dashed; cursor:default}
+.mcell.hol{background:var(--surface-2); border-style:dashed; cursor:default}
+.mcell .n{font-size:11.5px; font-weight:650; color:var(--faint)}
+.mcell.today .n{color:var(--accent)}
+.mcell .t{font-size:12.5px; font-weight:560; line-height:1.3; overflow:hidden}
+.mcell .bar{height:3px; border-radius:2px; background:var(--t); margin:-1px -3px 1px}
+.mcell .hn{font-size:11.5px; color:var(--muted); font-style:italic}
+
+/* ── all-classes month ──────────────────────────────────────────────
+   One mini-row per class, always in the same order and always the same
+   height whether the class meets or not. The fixed vertical position is
+   the whole point: you scan down a column and Grade 7 is always third. */
+.mcell.multi{min-height:98px; gap:1px; padding:6px 7px}
+.mcell .nrow{display:flex; align-items:center; gap:5px; margin-bottom:2px}
+.mcell .warn{
+  margin-left:auto; font-size:10.5px; font-weight:750; color:var(--warn);
+  display:flex; align-items:center; gap:2px;
+}
+.mcell.collide{border-color:var(--warn); box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 22%,transparent)}
+
+.mrow{
+  display:flex; align-items:center; gap:5px; min-height:19px;
+  padding:1px 3px; margin:0 -3px; border-radius:4px; background:var(--w,transparent);
+}
+.mrow.live{cursor:pointer}
+.mrow.live:hover{outline:1.5px solid var(--border-strong); outline-offset:0}
+.mrow .mc{
+  width:15px; height:14px; border-radius:3.5px; background:var(--c); color:#fff;
+  font-size:9.5px; font-weight:800; display:grid; place-items:center; flex:0 0 auto;
+}
+.mrow.absent .mc{opacity:.3}
+.mrow.void .mc{opacity:.14}
+.mrow .md{width:7px; height:7px; border-radius:50%; background:var(--t); flex:0 0 auto}
+.mrow .md.no{background:transparent}
+.mrow .mt{
+  flex:1; min-width:0; font-size:11.5px; font-weight:520; line-height:1.25;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+/* An unplanned meeting is a ruled blank, like a line in a ledger — never the
+   word "Untitled", which reads as an error twenty times over. */
+.mrow .mt.blank{height:1px; background:var(--border-strong); opacity:.5; margin-right:5px}
+.mrow .mt.nc{color:var(--faint); font-style:italic; font-size:10.5px; font-weight:500}
+.legend{
+  display:flex; align-items:center; gap:14px; margin-bottom:12px;
+  font-size:12px; color:var(--muted); flex-wrap:wrap;
+}
+.legend .k{display:flex; align-items:center; gap:6px}
+.legend .k i{width:11px;height:11px;border-radius:3px;background:var(--c);display:block}
+
+/* ─────────────────────────── Overview (week) ─────────────────────────── */
+.ovgrid{display:grid; gap:8px; min-width:760px}
+.ovhead{
+  font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase;
+  letter-spacing:.07em; padding:0 2px 2px; text-align:center;
+}
+.ovhead small{display:block; font-weight:500; color:var(--faint); font-size:11px;
+  text-transform:none; letter-spacing:0}
+.ovclass{
+  display:flex; align-items:center; gap:8px; padding:10px 11px; background:var(--surface);
+  border:1px solid var(--border); border-left:3px solid var(--c); border-radius:9px;
+  font-weight:620; font-size:13px; position:sticky; left:0; z-index:2; cursor:pointer;
+}
+.ovcell{
+  min-height:62px; background:var(--surface); border:1px solid var(--border);
+  border-radius:9px; padding:8px 10px; display:flex; flex-direction:column; gap:5px;
+  cursor:pointer;
+}
+.ovcell:hover{border-color:var(--border-strong)}
+.ovcell.empty{background:transparent; border-style:dashed; cursor:default}
+.ovcell .t{font-size:12.5px; font-weight:560; line-height:1.32}
+.ovcell.empty .t{color:var(--faint); font-style:italic; font-weight:500}
+.ovcell .t.blank{height:1px; background:var(--border-strong); opacity:.5; margin-top:7px}
+
+/* ─────────────────────────── Format toolbar ─────────────────────────── */
+.fmt{
+  position:fixed; display:none; gap:1px; background:var(--surface); padding:3px;
+  border:1px solid var(--border-strong); border-radius:8px; box-shadow:var(--shadow); z-index:60;
+}
+.fmt.on{display:flex}
+.fmt button{
+  width:29px;height:27px;border-radius:5px;display:grid;place-items:center;
+  color:var(--muted); font-size:13px;
+}
+.fmt button:hover{background:var(--surface-2); color:var(--text)}
+.fmt button b{font-size:14px}
+.fmt button i{font-size:14px; font-family:Georgia,serif}
+
+/* ─────────────────────────── Menu ─────────────────────────── */
+.menu{
+  position:fixed; display:none; flex-direction:column; min-width:250px; padding:5px;
+  background:var(--surface); border:1px solid var(--border-strong); border-radius:10px;
+  box-shadow:var(--shadow); z-index:80;
+}
+.menu.on{display:flex}
+.menu .sec{
+  font-size:10px; font-weight:700; color:var(--faint); text-transform:uppercase;
+  letter-spacing:.08em; padding:7px 9px 4px;
+}
+.menu button{
+  text-align:left; padding:7px 9px; border-radius:6px; font-size:13px; display:flex;
+  align-items:center; gap:9px;
+}
+.menu button:hover{background:var(--surface-2)}
+.menu button.danger:hover{background:color-mix(in srgb,#dc2626 12%,transparent); color:#dc2626}
+.menu button small{display:block; color:var(--faint); font-size:11.5px; font-weight:450}
+.menu button .col{display:flex; flex-direction:column; gap:1px}
+.menu hr{border:none; border-top:1px solid var(--border); margin:4px 0}
+.menu .sw{width:11px;height:11px;border-radius:3px;background:var(--t);flex:0 0 auto}
+.menu .sw.none{background:transparent;border:1px dashed var(--border-strong)}
+
+/* ─────────────────────────── Toast ─────────────────────────── */
+.toast{
+  position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(14px);
+  background:var(--text); color:var(--bg); padding:9px 16px; border-radius:9px;
+  font-size:13px; font-weight:520; box-shadow:var(--shadow); z-index:90;
+  opacity:0; pointer-events:none; transition:opacity .16s,transform .16s; white-space:nowrap;
+}
+.toast.on{opacity:1; transform:translateX(-50%) translateY(0)}
+
+/* ─────────────────────────── Panel ─────────────────────────── */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:70;display:none}
+.scrim.on{display:block}
+.panel{
+  position:fixed; top:0; right:0; bottom:0; width:min(460px,94vw); background:var(--surface);
+  border-left:1px solid var(--border); z-index:75; padding:20px; overflow:auto;
+  display:none; flex-direction:column; gap:18px;
+}
+.panel.on{display:flex}
+.panel h3{margin:0; font-size:16px; letter-spacing:-.01em}
+.panel h4{margin:0; font-size:13px; letter-spacing:-.01em}
+.panel .grp{display:flex; flex-direction:column; gap:8px}
+.panel .grp>label{font-size:11px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.07em}
+.panel input[type=text],.panel input[type=date]{
+  padding:7px 10px; border:1px solid var(--border); border-radius:7px;
+  background:var(--bg); outline:none; width:100%;
+}
+.panel input:focus{border-color:var(--accent)}
+.panel .note{font-size:12px; color:var(--muted); line-height:1.5}
+.panel hr{border:none;border-top:1px solid var(--border);margin:2px 0;width:100%}
+
+.dayrow{display:flex; gap:6px; flex-wrap:wrap}
+.daychip{
+  padding:6px 12px; border-radius:7px; border:1px solid var(--border);
+  font-size:12.5px; font-weight:600; color:var(--muted); min-width:44px;
+}
+.daychip.on{background:var(--c); border-color:var(--c); color:#fff}
+
+.clslist{display:flex; flex-direction:column; gap:4px}
+.clsitem{
+  display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px;
+  border:1px solid var(--border); font-size:13.5px; font-weight:560; cursor:pointer;
+}
+.clsitem:hover{background:var(--surface-2)}
+.clsitem.on{border-color:var(--c); background:color-mix(in srgb,var(--c) 8%,transparent)}
+.clsitem .dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:0 0 auto}
+.clsitem .meta{margin-left:auto; font-size:11.5px; color:var(--faint); font-weight:500}
+
+.swatches{display:flex; gap:6px; flex-wrap:wrap}
+.swatch{width:24px;height:24px;border-radius:6px;background:var(--c);border:2px solid transparent}
+.swatch.on{border-color:var(--text)}
+
+.rowedit{display:flex; align-items:center; gap:8px; padding:6px 8px;
+  border:1px solid var(--border); border-radius:7px; font-size:13px; cursor:grab}
+.rowedit.dragging{opacity:.4}
+.rowedit.over{border-color:var(--accent)}
+.rowedit .grip{color:var(--faint); letter-spacing:-2px; font-size:12px}
+.rowedit .txt{flex:1; outline:none}
+.rowedit .x{color:var(--faint); font-size:15px}
+.rowedit .x:hover{color:#dc2626}
+
+.holitem{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:5px 0}
+.holitem .d{color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap}
+.holitem .r{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.holitem .x{color:var(--faint);font-size:15px}
+.holitem .x:hover{color:#dc2626}
+.addrow{display:flex;gap:6px}
+.addrow input{flex:1}
+.addrow button{padding:7px 13px;border:1px solid var(--border);border-radius:7px;
+  font-size:12.5px;font-weight:600;color:var(--muted); white-space:nowrap}
+.addrow button:hover{background:var(--surface-2);color:var(--text)}
+
+.helprow{display:flex; gap:12px; align-items:baseline; padding:5px 0; font-size:13px}
+.helprow .g{
+  flex:0 0 150px; font-weight:620; font-size:12px; color:var(--text);
+}
+.helprow .d{color:var(--muted); font-size:12.5px; line-height:1.45}
+kbd{
+  font:inherit; font-size:11px; font-weight:650; padding:1.5px 5px; border-radius:4px;
+  border:1px solid var(--border-strong); background:var(--surface-2); color:var(--text);
+}
+
+/* ─────────────────────────── Selection ─────────────────────────── */
+.daycol.selected .dayhead{
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent);
+}
+.mcell.selected{
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent);
+}
+#selbar{
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(14px);
+  display:none; align-items:center; gap:9px; padding:8px 12px; z-index:85;
+  background:var(--surface); border:1px solid var(--border-strong);
+  border-radius:11px; box-shadow:var(--shadow); opacity:0; transition:opacity .14s,transform .14s;
+}
+#selbar.on{display:flex; opacity:1; transform:translateX(-50%) translateY(0)}
+#selbar .n{font-size:12.5px; font-weight:620; white-space:nowrap; margin-right:2px}
+#selbar button{
+  padding:4px 9px; border-radius:6px; font-size:11.5px; font-weight:700;
+  letter-spacing:.04em; text-transform:uppercase; color:#fff; background:var(--t);
+}
+#selbar button.ghost{
+  background:none; color:var(--muted); border:1px solid var(--border);
+  text-transform:none; letter-spacing:0; font-weight:560; font-size:12px;
+}
+#selbar button.ghost:hover{background:var(--surface-2); color:var(--text)}
+
+/* ─────────────────────────── Search ─────────────────────────── */
+.searchbox{
+  position:relative; display:flex; align-items:center; gap:7px; height:32px;
+  width:210px; padding:0 9px; border-radius:8px; background:var(--surface-2);
+  border:1px solid transparent; transition:width .16s ease, border-color .12s;
+}
+.searchbox:focus-within{width:300px; background:var(--surface); border-color:var(--accent)}
+.searchbox .si{width:15px; height:15px; fill:none; stroke:var(--faint);
+  stroke-width:1.9; stroke-linecap:round; flex:0 0 auto}
+.searchbox input{
+  flex:1; min-width:0; border:none; background:none; outline:none; font-size:13px;
+}
+.searchbox input::placeholder{color:var(--faint)}
+.searchbox .hint{flex:0 0 auto; font-size:10px; opacity:.7}
+.searchbox:focus-within .hint{display:none}
+.searchbox .hits{
+  position:absolute; top:38px; right:0; width:min(560px,78vw); max-height:62vh;
+  overflow:auto; padding:5px; display:none; z-index:78;
+  background:var(--surface); border:1px solid var(--border-strong);
+  border-radius:11px; box-shadow:var(--shadow);
+}
+.searchbox .hits.on{display:block}
+/* Narrow windows: give the grid the room, and let the box grow back on focus. */
+@media (max-width:1040px){
+  .searchbox{width:150px}
+  .searchbox:focus-within{width:240px}
+  .searchbox .hint{display:none}
+}
+@media (max-width:820px){
+  .brand small{display:none}
+  .searchbox{width:34px; padding:0 8px}
+  .searchbox input{opacity:0; transition:opacity .12s}
+  .searchbox:focus-within{width:220px}
+  .searchbox:focus-within input{opacity:1}
+}
+.searchbox .hit,.searchbox .hit{
+  display:flex; align-items:baseline; gap:9px; padding:8px 11px; border-radius:8px;
+  cursor:pointer; font-size:13px;
+}
+.searchbox .hit.on,.searchbox .hit:hover{background:var(--surface-2)}
+.searchbox .hit .mc{
+  width:17px; height:15px; border-radius:4px; background:var(--c); color:#fff;
+  font-size:9.5px; font-weight:800; display:grid; place-items:center; flex:0 0 auto;
+}
+.searchbox .hit .d{color:var(--faint); font-size:11.5px; white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.searchbox .hit .t{font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  max-width:40%}
+.searchbox .hit .s{color:var(--muted); font-size:12px; flex:1; min-width:0;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.searchbox .hit mark{background:color-mix(in srgb,var(--accent) 28%,transparent);
+  color:inherit; border-radius:2px}
+.search .none{padding:22px 16px; text-align:center; color:var(--faint); font-size:13px}
+
+.empty-state{text-align:center;color:var(--muted);padding:70px 20px}
+.empty-state b{display:block;font-size:16px;margin-bottom:6px;color:var(--text)}
+/* Global, not scoped to .empty-state — it's used in the panels too, where it
+   was silently rendering as bare text. */
+.cta{
+  display:inline-flex; gap:8px; align-items:center; justify-content:center;
+  padding:9px 16px; border-radius:9px; background:var(--accent); color:#fff;
+  font-weight:600; font-size:13.5px;
+}
+.cta:hover{filter:brightness(1.08)}
+.empty-state .cta{margin-top:16px}
+.empty-state .alt{display:block; margin-top:12px; font-size:12.5px; color:var(--faint)}
+.empty-state .alt button{color:var(--accent); font-weight:600; text-decoration:underline}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">Lesson Planner</div>
+  <div class="spacer"></div>
+  <div class="segmented" id="views"></div>
+  <div class="spacer"></div>
+  <div class="searchbox" id="searchbox">
+    <svg class="si" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8 20 20"/></svg>
+    <input id="searchInput" type="text" placeholder="Search all classes" autocomplete="off"
+           spellcheck="false" aria-label="Search all classes">
+    <kbd class="hint">⌘K</kbd>
+    <div class="hits" id="searchHits"></div>
+  </div>
+  <button class="ico" id="btnMore" title="Menu" aria-label="Menu">
+    <svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+      <circle cx="18.5" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>
+  </button>
+</div>
+
+<div class="tabs" id="tabs"></div>
+
+<div class="subbar">
+  <button class="navbtn" id="prev" title="Previous">‹</button>
+  <button class="navbtn" id="next" title="Next">›</button>
+  <button class="iconbtn" id="today">Today</button>
+  <div class="period" id="period"></div>
+  <div class="spacer"></div>
+  <div id="storage"></div>
+  <div id="overflow"></div>
+</div>
+
+<div class="stage" id="stage"></div>
+
+<div class="fmt" id="fmt">
+  <button data-cmd="bold" title="Bold (⌘B)"><b>B</b></button>
+  <button data-cmd="italic" title="Italic (⌘I)"><i>I</i></button>
+  <button data-cmd="insertUnorderedList" title="Bullet list">•—</button>
+  <button data-cmd="insertOrderedList" title="Numbered list">1.</button>
+</div>
+
+<div id="dragCaret"></div>
+<div id="dragGhost"></div>
+<div id="dragLabel"></div>
+
+<div id="selbar"></div>
+
+<div class="menu" id="menu"></div>
+<div class="toast" id="toast"></div>
+<div class="scrim" id="scrim"></div>
+<div class="panel" id="panel"></div>
+<input type="file" id="filepick" accept="application/json" style="display:none">
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════════
+   CONSTANTS
+   ═══════════════════════════════════════════════════════════════════ */
+
+const TAGS = {
+  none:    { label:'No tag',     color:'transparent' },
+  test:    { label:'Test',       color:'#dc2626' },
+  quiz:    { label:'Quiz',       color:'#ea580c' },
+  lab:     { label:'Lab',        color:'#0d9488' },
+  project: { label:'Project',    color:'#7c3aed' },
+  review:  { label:'Review',     color:'#2563eb' },
+  trip:    { label:'Field Trip', color:'#16a34a' },
+};
+/* Tags that count as an assessment for collision detection in the month view. */
+const ASSESSMENT = new Set(['test','quiz']);
+
+const DOW  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DOW3 = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MON  = ['January','February','March','April','May','June','July',
+              'August','September','October','November','December'];
+const WEEKDAYS = [1,2,3,4,5];
+const PALETTE = ['#2563eb','#059669','#d97706','#7c3aed','#dc2626','#0d9488','#db2777','#65a30d'];
+const STORAGE_KEY = 'lessonPlannerSandbox.v2';
+
+const ALL = 'ALL';                       // sentinel course id for the all-classes tab
+
+/* ═══════════════════════════════════════════════════════════════════
+   DATE HELPERS  (dates are 'YYYY-MM-DD' strings, parsed as local)
+   ═══════════════════════════════════════════════════════════════════ */
+
+const pad = n => String(n).padStart(2,'0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y,m-1,d); };
+const addDays = (s,n) => { const d = parse(s); d.setDate(d.getDate()+n); return iso(d); };
+const dow = s => parse(s).getDay();
+const isWeekday = s => { const w = dow(s); return w >= 1 && w <= 5; };
+
+function weekStart(s){                   // Monday of the week containing s
+  const w = dow(s);
+  return addDays(s, w === 0 ? -6 : 1 - w);
+}
+const fmtShort = s => { const d = parse(s); return `${d.getMonth()+1}/${d.getDate()}`; };
+const fmtLong  = s => { const d = parse(s);
+  return `${DOW[d.getDay()]}, ${MON[d.getMonth()]} ${d.getDate()}`; };
+const fmtMed   = s => { const d = parse(s); return `${MON[d.getMonth()].slice(0,3)} ${d.getDate()}`; };
+const fmtMedY  = s => { const d = parse(s);
+  return `${MON[d.getMonth()].slice(0,3)} ${d.getDate()}, ${d.getFullYear()}`; };
+const fmtDay   = s => { const d = parse(s);
+  return `${DOW3[d.getDay()]}, ${MON[d.getMonth()].slice(0,3)} ${d.getDate()}, ${d.getFullYear()}`; };
+const dayDiff  = (a,b) => Math.round((parse(a) - parse(b)) / 86400000);
+const uid = () => Math.random().toString(36).slice(2,10);
+
+/** A span of days, collapsing whatever the two ends share.
+    "Aug 24 – 28, 2026" · "Aug 31 – Sep 4, 2026" · "Dec 28, 2026 – Jan 1, 2027" */
+function fmtRange(a, b){
+  const x = parse(a), y = parse(b);
+  const mA = MON[x.getMonth()].slice(0,3), mB = MON[y.getMonth()].slice(0,3);
+  if (x.getFullYear() !== y.getFullYear())
+    return `${mA} ${x.getDate()}, ${x.getFullYear()} – ${mB} ${y.getDate()}, ${y.getFullYear()}`;
+  if (x.getMonth() !== y.getMonth())
+    return `${mA} ${x.getDate()} – ${mB} ${y.getDate()}, ${y.getFullYear()}`;
+  return `${mA} ${x.getDate()} – ${y.getDate()}, ${y.getFullYear()}`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TERMS
+   ───────────────────────────────────────────────────────────────────
+   A term is just a start date. The school owns a default set; a class
+   may override it. Week numbers count from the start of whichever term
+   contains the date, so "Week 3 · S2" means the third week of the
+   second semester — not the third week of the year.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const TERM_MODES = {
+  semester:  { n:2, abbr:'S', label:'Semesters'  },
+  year:      { n:1, abbr:'',  label:'Whole year' },
+  trimester: { n:3, abbr:'T', label:'Trimesters' },
+  custom:    { n:0, abbr:'T', label:'Custom'     },
+};
+
+/** N term starts spread evenly across a year, each snapped to a Monday. */
+function spreadTerms(yearStart, yearEnd, n){
+  const a = parse(yearStart), b = parse(yearEnd);
+  const out = [yearStart];
+  for (let i = 1; i < n; i++)
+    out.push(weekStart(iso(new Date(a.getTime() + (b - a) * i / n))));
+  return out;
+}
+
+const termsFor = c => (c && c.terms) ? c.terms : state.terms;
+
+/** Which term a date falls in: { index, start, mode, count } */
+function termOn(date, c){
+  const t = termsFor(c);
+  if (!t || !t.starts || !t.starts.length) return null;
+  let i = 0;
+  t.starts.forEach((s,k) => { if (date >= s) i = k; });
+  return { index:i, start:t.starts[i], mode:t.mode, count:t.starts.length };
+}
+
+const termAbbr = t =>
+  t && t.count > 1 && TERM_MODES[t.mode] && TERM_MODES[t.mode].abbr
+    ? TERM_MODES[t.mode].abbr + (t.index + 1) : '';
+
+/** "Week 3 · S1", or just "Week 3" when the year isn't divided. */
+function weekLabel(date, c){
+  const t = termOn(date, c);
+  if (!t) return '';
+  const n = Math.floor(dayDiff(weekStart(date), weekStart(t.start)) / 7) + 1;
+  if (n < 1) return '';
+  const abbr = termAbbr(t);
+  return abbr ? `Week ${n} · ${abbr}` : `Week ${n}`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SEED DATA  (loaded on demand, never automatically)
+   ═══════════════════════════════════════════════════════════════════ */
+
+const mkRows = labels => labels.map(l => ({ id:uid(), label:l }));
+
+function emptyState(){
+  const yearStart = '2026-08-24', yearEnd = '2027-06-04';
+  return {
+    schemaVersion: 3,
+    yearStart, yearEnd,
+    terms: { mode:'semester', starts: spreadTerms(yearStart, yearEnd, 2) },
+    holidays: [],
+    courses: [],
+    lessons: {},
+  };
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   STATE + PERSISTENCE + UNDO
+   ═══════════════════════════════════════════════════════════════════ */
+
+let state, ui, undoStack = [], redoStack = [];
+
+function load(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return migrate(JSON.parse(raw));
+  } catch(e){ console.warn('load failed', e); }
+  return emptyState();
+}
+
+/** Bring older files forward. v1 = rotating cycle, v2 = weekdays, v3 = terms. */
+function migrate(data){
+  if (!data || !data.courses) return emptyState();
+  if (data.schemaVersion >= 3) return data;
+
+  data.courses.forEach(c => {
+    if (!c.weekdays) c.weekdays = [...WEEKDAYS];   // old cycleDays don't map; assume all
+    delete c.cycleDays;
+    if (!c.startDate) c.startDate = data.yearStart;
+    if (!c.endDate)   c.endDate   = data.yearEnd;
+    if (!c.cancelled) c.cancelled = [];
+    if (c.terms === undefined) c.terms = null;     // null = follow the school default
+  });
+  delete data.cycleLength;
+  if (!data.terms)
+    data.terms = { mode:'semester', starts: spreadTerms(data.yearStart, data.yearEnd, 2) };
+  data.schemaVersion = 3;
+  return data;
+}
+
+function save(){
+  /* localStorage stays a mirror even when a folder is connected — it costs
+     nothing and means a folder going missing never loses the day's work. */
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ console.warn('save failed', e); }
+  if (typeof scheduleFolderSave === 'function') scheduleFolderSave();
+}
+const clone = o => JSON.parse(JSON.stringify(o));
+
+/** Wrap a mutation so the whole thing becomes ONE undo entry. */
+function commit(label, fn){
+  undoStack.push({ label, snap: clone(state) });
+  if (undoStack.length > 60) undoStack.shift();
+  redoStack = [];
+  fn();
+  invalidateSchedule();
+  save();
+  render();
+  if (label) toast(label);
+}
+/**
+ * A targeted undo entry, for typing. Cloning the whole state on every cell
+ * focus would be wasteful, so a text edit records a pair of functions instead
+ * of a snapshot. They look their target up by id rather than closing over the
+ * object, because undoing a structural change swaps `state` for a fresh clone
+ * and any captured reference would then be pointing at an orphan.
+ */
+function pushEdit(label, apply, invert){
+  undoStack.push({ label, apply, invert });
+  if (undoStack.length > 60) undoStack.shift();
+  redoStack = [];
+}
+const setTitle = (id, v) => () => { const l = state.lessons[id]; if (l) l.title = v; };
+const setCell  = (id, rowId, v) => () => { const l = state.lessons[id]; if (l) l.cells[rowId] = v; };
+
+/** Live-edit a field, but bank ONE undo entry for the whole editing session. */
+function bindEditable(node, read, setter, label){
+  let before = null;
+  node.addEventListener('focus', () => { before = read(); });
+  node.addEventListener('blur', () => {
+    const after = read();
+    if (before !== null && after !== before)
+      pushEdit(label, setter(before), setter(after));
+    before = null;
+  });
+}
+
+function undo(){
+  if (!undoStack.length) return toast('Nothing to undo');
+  const e = undoStack.pop();
+  if (e.apply){
+    redoStack.push({ label:e.label, apply:e.invert, invert:e.apply });
+    e.apply();
+  } else {
+    redoStack.push({ label:'', snap: clone(state) });
+    state = e.snap;
+  }
+  invalidateSchedule(); save(); render();
+  toast('Undid: ' + (e.label || 'last change'));
+}
+function redo(){
+  if (!redoStack.length) return toast('Nothing to redo');
+  const e = redoStack.pop();
+  if (e.apply){
+    undoStack.push({ label:e.label, apply:e.invert, invert:e.apply });
+    e.apply();
+  } else {
+    undoStack.push({ label:'', snap: clone(state) });
+    state = e.snap;
+  }
+  invalidateSchedule(); save(); render();
+  toast('Redone');
+}
+
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('on'), 2400);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCHEDULE ENGINE
+   ───────────────────────────────────────────────────────────────────
+   Lessons have NO date. Each course owns an ordered array of lesson
+   ids. We generate the dates a course meets, then lesson[i] lands on
+   meetingDates[i]. Insert = splice; everything after re-projects onto
+   later dates for free.
+
+   A course meets on a date when ALL of these hold:
+     · it's a weekday inside the school year
+     · it isn't a school-wide holiday
+     · it's inside the course's own start/end range
+     · the weekday is one the course meets
+     · the course hasn't marked that specific date "No Class"
+   ═══════════════════════════════════════════════════════════════════ */
+
+let _schoolDays = null, _schoolKey = '';
+
+function holidayOn(date){
+  return state.holidays.find(h => date >= h.date && date <= (h.endDate || h.date)) || null;
+}
+
+/** Every school-wide teaching day in the year. */
+function schoolDays(){
+  const key = state.yearStart + '|' + state.yearEnd + '|' + JSON.stringify(state.holidays);
+  if (_schoolDays && _schoolKey === key) return _schoolDays;
+  const out = [];
+  for (let d = state.yearStart; d <= state.yearEnd; d = addDays(d,1)){
+    if (!isWeekday(d)) continue;
+    if (holidayOn(d)) continue;
+    out.push(d);
+  }
+  _schoolDays = out; _schoolKey = key;
+  return out;
+}
+const invalidateSchedule = () => { _schoolDays = null; };
+
+const isCancelled = (course, date) => course.cancelled.some(x => x.date === date);
+
+/** The dates this course meets, in order. */
+function meetingDates(course){
+  return schoolDays().filter(d =>
+    d >= course.startDate && d <= course.endDate &&
+    course.weekdays.includes(dow(d)) &&
+    !isCancelled(course, d));
+}
+function meetingIndexByDate(course){
+  const m = new Map();
+  meetingDates(course).forEach((d,i) => m.set(d, i));
+  return m;
+}
+function lessonOn(course, date){
+  const idx = meetingIndexByDate(course).get(date);
+  if (idx === undefined) return null;
+  const id = course.lessons[idx];
+  return id ? state.lessons[id] : null;
+}
+/** Lessons pushed past the end of the course's schedule. Never deleted. */
+const overflowCount = course => Math.max(0, course.lessons.length - meetingDates(course).length);
+
+function ensureLesson(course, idx){
+  while (course.lessons.length <= idx){
+    const id = uid();
+    state.lessons[id] = { id, title:'', tag:'none', cells:{} };
+    course.lessons.push(id);
+  }
+  return state.lessons[course.lessons[idx]];
+}
+const blankLesson = () => {
+  const id = uid();
+  state.lessons[id] = { id, title:'', tag:'none', cells:{} };
+  return id;
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   STRUCTURAL OPERATIONS — all of them array ops on course.lessons
+   ═══════════════════════════════════════════════════════════════════ */
+
+const insertDay = (c, i) =>
+  commit('Day inserted · rest shifted', () => c.lessons.splice(i, 0, blankLesson()));
+
+const removeDay = (c, i) =>
+  commit('Day removed · gap closed', () => c.lessons.splice(i, 1));
+
+const clearDay = (c, i) =>
+  commit('Day cleared', () => {
+    const l = state.lessons[c.lessons[i]];
+    if (l){ l.title = ''; l.tag = 'none'; l.cells = {}; }
+  });
+
+const duplicateDay = (c, i) =>
+  commit('Day duplicated', () => {
+    const src = state.lessons[c.lessons[i]], id = uid();
+    state.lessons[id] = { id, title:src.title, tag:src.tag, cells:clone(src.cells) };
+    c.lessons.splice(i+1, 0, id);
+  });
+
+const swapDays = (c, a, b) =>
+  commit('Days swapped', () => {
+    const t = c.lessons[a]; c.lessons[a] = c.lessons[b]; c.lessons[b] = t;
+  });
+
+/** Extract at `from`, close the gap, re-insert at `to`. One atomic move. */
+const moveDay = (c, from, to) =>
+  commit('Day moved · rest shifted', () => {
+    const [id] = c.lessons.splice(from, 1);
+    c.lessons.splice(from < to ? to - 1 : to, 0, id);
+  });
+
+/** "No Class": drop this meeting for ONE course and ripple it forward. */
+const cancelMeeting = (c, date) =>
+  commit(`No Class ${fmtMed(date)} · ${c.name} shifted`, () => {
+    if (!isCancelled(c, date)) c.cancelled.push({ date, reason:'No Class' });
+  });
+
+const restoreMeeting = (c, date) =>
+  commit(`${fmtMed(date)} restored · ${c.name} shifted back`, () => {
+    c.cancelled = c.cancelled.filter(x => x.date !== date);
+  });
+
+/* ═══════════════════════════════════════════════════════════════════
+   UI STATE
+   ═══════════════════════════════════════════════════════════════════ */
+
+state = load();
+ui = { view:'week', courseId: state.courses[0] ? state.courses[0].id : ALL, anchor:'' };
+ui.anchor = clampToYear(iso(new Date()));
+
+function clampToYear(d){
+  if (d < state.yearStart) return state.yearStart;
+  if (d > state.yearEnd)   return state.yearEnd;
+  return d;
+}
+const isAll = () => ui.courseId === ALL;
+function course(){
+  return state.courses.find(c => c.id === ui.courseId) || state.courses[0] || null;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RENDER
+   ═══════════════════════════════════════════════════════════════════ */
+
+const $ = id => document.getElementById(id);
+const el = (tag, cls, txt) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (txt !== undefined) n.textContent = txt;
+  return n;
+};
+const VIEWS = [['day','Day'],['week','Week'],['month','Month']];
+
+function render(){
+  /* Never rebuild the stage mid-gesture — it would destroy the column the
+     pointer is captured on and the drag would die silently. */
+  if (drag && drag.active) return;
+  renderViews();
+  renderTabs();
+  renderPeriod();
+  const stage = $('stage');
+  stage.innerHTML = '';
+  if (!state.courses.length) return renderFirstRun(stage);
+  if (isAll()){
+    ({ day:renderAllDay, week:renderAllWeek, month:renderAllMonth })[ui.view](stage);
+  } else {
+    ({ day:renderDay, week:renderWeek, month:renderMonth })[ui.view](stage);
+  }
+  paintSelection();
+}
+
+function renderFirstRun(stage){
+  const box = el('div','empty-state');
+  box.appendChild(el('b','','No classes yet'));
+  box.appendChild(el('div','','Add each class you teach — its name, the days it meets, and the rows you plan against.'));
+  const cta = el('button','cta','+ Add a class');
+  cta.onclick = () => { openPanel('classes'); setTimeout(addCourse, 60); };
+  box.appendChild(cta);
+  const alt = el('div','alt');
+  alt.appendChild(document.createTextNode('Already have a backup file? '));
+  const imp = el('button','','Open it');
+  imp.onclick = () => $('filepick').click();
+  alt.appendChild(imp);
+  box.appendChild(alt);
+  stage.appendChild(box);
+}
+
+function renderViews(){
+  const box = $('views'); box.innerHTML = '';
+  VIEWS.forEach(([k,label]) => {
+    const b = el('button', ui.view === k ? 'on' : '', label);
+    b.onclick = () => { ui.view = k; render(); };
+    box.appendChild(b);
+  });
+}
+
+function renderTabs(){
+  const box = $('tabs'); box.innerHTML = '';
+  state.courses.forEach(c => {
+    const t = el('button', 'tab' + (c.id === ui.courseId ? ' on' : ''));
+    t.style.setProperty('--c', c.color);
+    t.appendChild(el('span','dot'));
+    t.appendChild(el('span','', c.name));
+    t.onclick = () => { ui.courseId = c.id; render(); };
+    box.appendChild(t);
+  });
+  if (state.courses.length){
+    const t = el('button','tab sep' + (isAll() ? ' on' : ''));
+    t.style.setProperty('--c','var(--muted)');
+    const dots = el('span','dots');
+    state.courses.slice(0,4).forEach(c => {
+      const i = document.createElement('i');
+      i.style.background = c.color;
+      dots.appendChild(i);
+    });
+    t.appendChild(dots);
+    t.appendChild(el('span','','All Classes'));
+    t.onclick = () => { ui.courseId = ALL; render(); };
+    box.appendChild(t);
+  }
+}
+
+/** The anchor the Today button would set. Clamped into the school year, and
+    snapped onto a weekday in day view — where a Saturday anchor renders an
+    empty state rather than a lesson. */
+function todayAnchor(){
+  let d = clampToYear(iso(new Date()));
+  if (ui.view === 'day')
+    for (let i = 0; i < 7 && !isWeekday(d); i++) d = clampToYear(addDays(d, 1));
+  return d;
+}
+
+/** The button is noise when pressing it wouldn't move anything. Asking that
+    directly — rather than "is today inside the year" — is what makes it hide
+    over the summer, and on a weekend in day view. */
+function todayOnScreen(){
+  const t = todayAnchor();
+  if (ui.view === 'day') return ui.anchor === t;
+  if (ui.view === 'month'){
+    const a = parse(ui.anchor), d = parse(t);
+    return a.getFullYear() === d.getFullYear() && a.getMonth() === d.getMonth();
+  }
+  return weekStart(ui.anchor) === weekStart(t);
+}
+
+function renderPeriod(){
+  const p = $('period'); p.innerHTML = '';
+  const c = isAll() ? null : course();
+  let text = '', badge = '';
+
+  if (ui.view === 'day'){
+    text  = fmtDay(ui.anchor);
+    badge = weekLabel(ui.anchor, c);
+  } else if (ui.view === 'month'){
+    const d = parse(ui.anchor);
+    text  = `${MON[d.getMonth()]} ${d.getFullYear()}`;
+    badge = termAbbr(termOn(ui.anchor, c));
+  } else {
+    const dates = weekDates(ui.anchor);
+    text  = fmtRange(dates[0], dates[dates.length-1]);
+    badge = weekLabel(dates[0], c);
+  }
+  p.appendChild(el('span','', text));
+  if (badge) p.appendChild(el('span','wk', badge));
+
+  $('today').style.display = todayOnScreen() ? 'none' : '';
+  paintStorageBadge();
+
+  const ob = $('overflow'); ob.innerHTML = '';
+  if (c){
+    const n = overflowCount(c);
+    if (n > 0){
+      const pill = el('div','overflowpill', `${n} lesson${n>1?'s':''} past the end`);
+      pill.title = 'Kept, not deleted. Extend the class end date or remove days to pull them back in.';
+      ob.appendChild(pill);
+    }
+  }
+}
+
+const weekDates = anchor => {
+  const s = weekStart(anchor);
+  return [0,1,2,3,4].map(i => addDays(s,i));
+};
+
+/* ─────────────────────────── WEEK (one class) ─────────────────────────── */
+
+function renderWeek(stage){
+  const c = course();
+  const dates = weekDates(ui.anchor);
+  const idxByDate = meetingIndexByDate(c);
+
+  const grid = el('div','weekgrid');
+  grid.style.setProperty('--rowh','66px');
+  grid.style.setProperty('--headh','86px');
+  grid.style.gridTemplateColumns = `168px repeat(${dates.length}, minmax(190px,1fr))`;
+
+  /* Row labels */
+  const labels = el('div','rowlabels');
+  labels.appendChild(el('div','rl-spacer'));
+  c.rows.forEach((r,ri) => labels.appendChild(rowLabel(c, r, ri)));
+  const add = el('button','addrowmini','+ Row');
+  add.title = 'Add a row to this class';
+  add.onclick = () => commit('Row added', () => c.rows.push({ id:uid(), label:'New row' }));
+  labels.appendChild(add);
+  grid.appendChild(labels);
+
+  /* Day columns */
+  dates.forEach(date => {
+    const hol = holidayOn(date);
+    if (hol) return grid.appendChild(offColumn(hol.reason, fmtShort(date)));
+
+    if (isCancelled(c, date)){
+      const col = offColumn('No Class', fmtShort(date));
+      const b = el('button','','Restore');
+      b.onclick = () => restoreMeeting(c, date);
+      col.firstChild.appendChild(b);
+      return grid.appendChild(col);
+    }
+    const idx = idxByDate.get(date);
+    if (idx === undefined)
+      return grid.appendChild(offColumn('No Class', fmtShort(date)));
+
+    grid.appendChild(dayColumn(c, date, idx));
+  });
+
+  stage.appendChild(grid);
+}
+
+/* ─────────────────────────── Editable cells ───────────────────────────
+   Pasting from Word or Google Docs carries inline styles, font tags and
+   class names that wreck the grid's typography and bloat the file. Keep the
+   handful of tags the toolbar can actually produce; unwrap everything else.
+   ─────────────────────────────────────────────────────────────────────── */
+
+const PASTE_KEEP = new Set(['B','STRONG','I','EM','U','UL','OL','LI','BR','P','DIV']);
+const PASTE_DROP = new Set(['SCRIPT','STYLE','HEAD','TITLE','META','LINK']);
+
+function cleanPaste(html){
+  const box = document.createElement('div');
+  box.innerHTML = html;                       // innerHTML never runs scripts
+  box.querySelectorAll([...PASTE_DROP].join(',')).forEach(n => n.remove());
+  /* Static list, walked in document order — unwrapped children stay in it
+     and still get visited, so nested junk is stripped too. */
+  box.querySelectorAll('*').forEach(n => {
+    if (!PASTE_KEEP.has(n.tagName)) return n.replaceWith(...n.childNodes);
+    [...n.attributes].forEach(a => n.removeAttribute(a.name));
+  });
+  return box.innerHTML;
+}
+const escapeHtml = s => s.replace(/[&<>]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[ch]));
+
+/** Everything a rich-text cell needs: content, live save, undo, clean paste. */
+function makeCell(lesson, rowId, cls){
+  const cell = el('div', cls || 'cell');
+  cell.contentEditable = 'true';
+  cell.innerHTML = lesson.cells[rowId] || '';
+  cell.dataset.row = rowId;
+  cell.oninput = () => { lesson.cells[rowId] = cell.innerHTML; save(); };
+  cell.onfocus = () => showFmt(cell);
+  cell.onblur  = () => hideFmt();
+  cell.addEventListener('paste', e => {
+    e.preventDefault();
+    const cd = e.clipboardData;
+    const html = cd.getData('text/html');
+    document.execCommand('insertHTML', false,
+      html ? cleanPaste(html) : escapeHtml(cd.getData('text/plain')).replace(/\n/g,'<br>'));
+  });
+  bindEditable(cell, () => cell.innerHTML, v => setCell(lesson.id, rowId, v), 'Cell edited');
+  return cell;
+}
+
+/** The lesson-concept input, with the same one-entry-per-session undo. */
+function makeTitle(lesson){
+  const title = document.createElement('input');
+  title.className = 'title';
+  title.value = lesson.title || '';
+  title.placeholder = 'Lesson concept…';
+  title.oninput = () => { lesson.title = title.value; save(); };
+  bindEditable(title, () => title.value, v => setTitle(lesson.id, v), 'Concept edited');
+  return title;
+}
+
+function offColumn(title, sub){
+  const col = el('div','daycol');
+  const box = el('div','offcol');
+  box.appendChild(el('b','', title));
+  box.appendChild(el('span','', sub));
+  col.appendChild(box);
+  return col;
+}
+
+function rowLabel(c, r, ri){
+  const rl = el('div','rowlabel');
+  rl.draggable = true;
+  rl.appendChild(el('span','grip','⋮⋮'));
+  const txt = el('span','txt', r.label);
+  txt.contentEditable = 'true';
+  txt.style.outline = 'none';
+  txt.onblur = () => {
+    const v = txt.textContent.trim();
+    if (v && v !== r.label) commit('Row renamed', () => { r.label = v; });
+    else txt.textContent = r.label;
+  };
+  txt.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); txt.blur(); } };
+  rl.appendChild(txt);
+  const x = el('button','x','×');
+  x.title = 'Delete row';
+  x.onclick = e => {
+    e.stopPropagation();
+    commit('Row deleted', () => c.rows.splice(ri,1));
+  };
+  rl.appendChild(x);
+
+  rl.ondragstart = e => {
+    e.dataTransfer.setData('text/row', String(ri));
+    e.dataTransfer.effectAllowed = 'move';
+    rl.classList.add('dragging');
+  };
+  rl.ondragend   = () => rl.classList.remove('dragging');
+  rl.ondragover  = e => {
+    if (!e.dataTransfer.types.includes('text/row')) return;
+    e.preventDefault(); rl.classList.add('over');
+  };
+  rl.ondragleave = () => rl.classList.remove('over');
+  rl.ondrop = e => {
+    e.preventDefault(); rl.classList.remove('over');
+    const from = Number(e.dataTransfer.getData('text/row'));
+    if (from === ri) return;
+    commit('Reordered rows', () => {
+      const [m] = c.rows.splice(from,1);
+      c.rows.splice(ri,0,m);
+    });
+  };
+  return rl;
+}
+
+function dayColumn(c, date, idx){
+  const lesson = ensureLesson(c, idx);
+  const col = el('div','daycol');
+  col.dataset.idx  = String(idx);
+  col.dataset.date = date;
+
+  const head = el('div','dayhead');
+  const top = el('div','top');
+  top.appendChild(el('span','dow', DOW3[dow(date)]));
+  top.appendChild(el('span','date', fmtShort(date)));
+  head.appendChild(top);
+
+  head.appendChild(makeTitle(lesson));
+
+  const tagrow = el('div','tagrow');
+  const pill = el('button','tagpill' + (lesson.tag === 'none' ? ' none' : ''),
+                  lesson.tag === 'none' ? '+ tag' : TAGS[lesson.tag].label);
+  pill.style.setProperty('--t', TAGS[lesson.tag].color);
+  pill.onclick = e => { e.stopPropagation(); openTagMenu(e, c, idx, date); };
+  tagrow.appendChild(pill);
+  head.appendChild(tagrow);
+
+  const grip = el('button','grip','⋮⋮');
+  grip.title = 'Drag to move this day';
+  head.appendChild(grip);
+
+  const more = el('button','more','⋯');
+  more.onclick = e => { e.stopPropagation(); openDayMenu(e, c, idx, date); };
+  head.appendChild(more);
+  head.oncontextmenu = e => { e.preventDefault(); openDayMenu(e, c, idx, date); };
+
+  col.appendChild(head);
+
+  c.rows.forEach(r => {
+    const cell = makeCell(lesson, r.id);
+    cell.oncontextmenu = e => { e.preventDefault(); openCellMenu(e, c, idx, r); };
+    col.appendChild(cell);
+  });
+
+  /* Drag starts from the grip, or from empty space in the header. One
+     listener on the header covers both — the grip is inside it, so binding
+     the grip separately would fire beginDrag twice for the same press.
+     Shift is reserved for range selection, so it must not start a drag. */
+  head.addEventListener('pointerdown', e => {
+    if (e.shiftKey) return;
+    if (e.target.closest('input, .more, .tagpill')) return;
+    beginDrag(e, c, col);
+  });
+  head.addEventListener('click', e => {
+    if (!e.shiftKey || e.target.closest('input, .more, .tagpill')) return;
+    e.preventDefault();
+    extendSelection(c, idx);
+  });
+
+  return col;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DAY DRAG — pointer events, geometry-based targeting.
+
+   The old version used HTML5 drag-and-drop. Every day column holds
+   several contenteditable cells, and dragover/dragleave fire per
+   ELEMENT, so crossing from the header into a cell fired dragleave and
+   wiped the drop indicator mid-aim. relatedTarget is routinely null
+   during a native drag, so the guard against that failed open. Result:
+   a flickering target that only sometimes accepted the drop.
+
+   Here nothing is hit-tested. We measure the columns on every move and
+   decide purely from the cursor's x position, so the cells underneath
+   are irrelevant and the indicator cannot flicker.
+
+     · within 22px of a boundary between days  → INSERT there
+     · anywhere else inside a day              → SWAP with that day
+   ═══════════════════════════════════════════════════════════════════ */
+
+const GUTTER = 24;        // half-width of an insert zone, px — fixed, not a %
+const THRESHOLD = 5;      // px of movement before a drag actually starts
+const EDGE = 64;          // autoscroll trigger distance from the stage edge
+const HYST = 8;           // px you must overshoot a boundary to change your mind
+
+let drag = null;
+
+function beginDrag(e, c, col){
+  if (e.button !== 0 || drag) return;
+  e.preventDefault();
+  drag = {
+    course: c,
+    fromIdx: Number(col.dataset.idx),
+    col,
+    x0: e.clientX, y0: e.clientY,
+    px: e.clientX, py: e.clientY,
+    active: false, target: null, geo: null, raf: 0,
+    pointerId: e.pointerId,
+  };
+  window.addEventListener('pointermove', onDragMove);
+  window.addEventListener('pointerup', onDragEnd);
+  window.addEventListener('pointercancel', cancelDrag);
+  window.addEventListener('blur', cancelDrag);
+}
+
+/* Moves only record the cursor. All measuring and painting happens in the
+   frame loop, so the indicator keeps updating while the pointer is parked
+   at a screen edge and the view scrolls underneath it. */
+function onDragMove(e){
+  if (!drag) return;
+  drag.px = e.clientX; drag.py = e.clientY;
+  if (!drag.active &&
+      Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) >= THRESHOLD) activateDrag();
+}
+
+function activateDrag(){
+  drag.active = true;
+  document.body.classList.add('dragging');
+  drag.col.classList.add('drag-src');
+
+  const head = drag.col.querySelector('.dayhead');
+  const r = head.getBoundingClientRect();
+  const ghost = $('dragGhost');
+  ghost.innerHTML = '';
+  const cl = head.cloneNode(true);
+  cl.style.width = r.width + 'px';
+  cl.style.height = r.height + 'px';
+  cl.style.margin = '0';
+  ghost.appendChild(cl);
+  ghost.style.width = r.width + 'px';
+  ghost.style.display = 'block';
+  ghost.dataset.dx = String(drag.x0 - r.left);   // grab it where it was grabbed,
+  ghost.dataset.dy = String(drag.y0 - r.top);    // so it doesn't jump under the hand
+  $('dragCaret').classList.remove('slide');      // first placement shouldn't animate
+  drag.raf = requestAnimationFrame(dragFrame);
+}
+
+function dragFrame(){
+  if (!drag || !drag.active) return;
+  autoScroll(drag.px);
+  drag.geo = columnGeometry();
+  drag.target = resolveTarget(drag.px, drag.target, drag.geo);
+  paintDrag(drag.px, drag.py, drag.geo);
+  drag.raf = requestAnimationFrame(dragFrame);
+}
+
+/** Measure every droppable day column. Holiday and no-class columns carry no
+    data-idx, so they're invisible here and can never be a swap target. */
+function columnGeometry(){
+  return [...document.querySelectorAll('.daycol[data-idx]')].map(n => {
+    const r = n.getBoundingClientRect();
+    return { idx:Number(n.dataset.idx), date:n.dataset.date, node:n,
+             left:r.left, right:r.right, top:r.top, bottom:r.bottom };
+  }).sort((a,b) => a.left - b.left);
+}
+
+/**
+ * Decide what a drop at this x means, purely from geometry — nothing is
+ * hit-tested, so the contenteditable cells underneath are irrelevant.
+ *
+ *   { kind:'insert', at, cx }  — sequence index to insert before
+ *   { kind:'swap', idx, node } — sequence index to exchange with
+ *   noop:true                  — resolves to no change; commits nothing
+ *
+ * Each result carries the x range [lo,hi] it owns. A decision keeps its
+ * territory plus HYST px, so the target doesn't flip back and forth while
+ * you're hovering near a boundary trying to release.
+ */
+function resolveTarget(x, prev, cols){
+  if (!cols.length) return null;
+  if (prev && prev.lo !== undefined && x >= prev.lo - HYST && x <= prev.hi + HYST) return prev;
+
+  // Boundaries: before the first column, between each pair, after the last.
+  const bounds = [{ x: cols[0].left, at: cols[0].idx }];
+  for (let i = 1; i < cols.length; i++)
+    bounds.push({ x:(cols[i-1].right + cols[i].left)/2, at: cols[i].idx });
+  bounds.push({ x: cols[cols.length-1].right, at: cols[cols.length-1].idx + 1 });
+
+  let best = null;
+  bounds.forEach(b => {
+    const d = Math.abs(x - b.x);
+    if (d <= GUTTER && (!best || d < best.d)) best = b;
+  });
+  if (best) return {
+    kind:'insert', at:best.at, cx:best.x,
+    lo:best.x - GUTTER, hi:best.x + GUTTER,
+    noop: best.at === drag.fromIdx || best.at === drag.fromIdx + 1,
+  };
+
+  const hit = cols.find(c => x >= c.left && x <= c.right);
+  if (!hit) return null;
+  return {
+    kind:'swap', idx:hit.idx, date:hit.date, node:hit.node,
+    lo:hit.left + GUTTER, hi:hit.right - GUTTER,
+    noop: hit.idx === drag.fromIdx,
+  };
+}
+
+function paintDrag(x, y, cols){
+  const ghost = $('dragGhost'), caret = $('dragCaret'), label = $('dragLabel');
+  ghost.style.left = (x - Number(ghost.dataset.dx)) + 'px';
+  ghost.style.top  = (y - Number(ghost.dataset.dy)) + 'px';
+
+  const t = drag.target;
+  const lit = t && t.kind === 'swap' && !t.noop ? t.node : null;
+  document.querySelectorAll('.swap-target').forEach(n => {
+    if (n !== lit) n.classList.remove('swap-target');
+  });
+  if (lit) lit.classList.add('swap-target');
+
+  let text = 'Release to cancel', sub = '';
+  if (t && t.kind === 'insert'){
+    const top = Math.min(...cols.map(c => c.top));
+    const bot = Math.max(...cols.map(c => c.bottom));
+    caret.style.display = 'block';
+    caret.style.left = (t.cx - 1.5) + 'px';
+    caret.style.top = top + 'px';
+    caret.style.height = (bot - top) + 'px';
+    caret.style.opacity = t.noop ? '.28' : '1';
+    requestAnimationFrame(() => caret.classList.add('slide'));
+    text = t.noop ? 'Back where it started' : 'Insert here';
+    sub  = t.noop ? '' : 'rest shifts forward one meeting';
+  } else {
+    caret.style.display = 'none';
+    caret.classList.remove('slide');
+    if (t && t.kind === 'swap')
+      text = t.noop ? 'Back where it started'
+                    : 'Swap with ' + DOW3[dow(t.date)] + ' ' + fmtShort(t.date);
+  }
+
+  label.innerHTML = '';
+  label.appendChild(el('div','', text));
+  if (sub) label.appendChild(el('div','sub', sub));
+  label.classList.toggle('dim', !t || t.noop);
+  label.style.display = 'block';
+  const lw = label.offsetWidth;
+  label.style.left = Math.min(Math.max(8, x + 16), innerWidth - lw - 8) + 'px';
+  label.style.top  = Math.min(y + 22, innerHeight - label.offsetHeight - 8) + 'px';
+}
+
+function autoScroll(x){
+  const stage = $('stage'), r = stage.getBoundingClientRect();
+  if (x < r.left + EDGE)       stage.scrollLeft -= Math.min(26, Math.max(3, (r.left + EDGE - x) / 2.5));
+  else if (x > r.right - EDGE) stage.scrollLeft += Math.min(26, Math.max(3, (x - (r.right - EDGE)) / 2.5));
+}
+
+function onDragEnd(){
+  if (!drag) return;
+  const { active, target, course:c, fromIdx } = drag;
+  teardownDrag();
+  if (!active || !target || target.noop) return;
+  if (target.kind === 'insert') moveDay(c, fromIdx, target.at);
+  else if (target.kind === 'swap') swapDays(c, fromIdx, target.idx);
+}
+
+function cancelDrag(){
+  if (!drag) return;
+  const wasActive = drag.active;
+  teardownDrag();
+  if (wasActive) toast('Move cancelled');
+}
+
+function teardownDrag(){
+  if (drag && drag.raf) cancelAnimationFrame(drag.raf);
+  window.removeEventListener('pointermove', onDragMove);
+  window.removeEventListener('pointerup', onDragEnd);
+  window.removeEventListener('pointercancel', cancelDrag);
+  window.removeEventListener('blur', cancelDrag);
+  document.body.classList.remove('dragging');
+  if (drag && drag.col) drag.col.classList.remove('drag-src');
+  document.querySelectorAll('.swap-target').forEach(n => n.classList.remove('swap-target'));
+  $('dragGhost').style.display = 'none';
+  $('dragCaret').style.display = 'none';
+  $('dragCaret').classList.remove('slide');
+  $('dragLabel').style.display = 'none';
+  drag = null;
+}
+
+/* ─────────────────────────── DAY (one class) ─────────────────────────── */
+
+function renderDay(stage){
+  const c = course(), date = ui.anchor;
+  const wrap = el('div','dayview');
+  const hol = holidayOn(date);
+
+  const bail = (title, sub, extra) => {
+    const card = el('div','card'), es = el('div','empty-state');
+    es.appendChild(el('b','', title));
+    es.appendChild(el('div','', sub));
+    if (extra) es.appendChild(extra);
+    card.appendChild(es); wrap.appendChild(card); stage.appendChild(wrap);
+  };
+
+  if (hol) return bail(hol.reason, 'No school');
+  if (isCancelled(c, date)){
+    const b = el('button','cta','Restore');
+    b.onclick = () => restoreMeeting(c, date);
+    return bail('No Class', 'Lessons shifted forward', b);
+  }
+  if (date < c.startDate) return bail('Not started', `Begins ${fmtMed(c.startDate)}`);
+  if (date > c.endDate)   return bail('Finished', `Ended ${fmtMed(c.endDate)}`);
+
+  const idx = meetingIndexByDate(c).get(date);
+  if (idx === undefined)
+    return bail('No Class', `Meets ${c.weekdays.map(w => DOW3[w]).join(' ')}`);
+
+  const lesson = ensureLesson(c, idx);
+  const card = el('div','card');
+  const hd = el('div','hd');
+  hd.appendChild(el('h2','', fmtLong(date)));
+  hd.appendChild(el('span','note','lesson #' + (idx+1)));
+  hd.appendChild(el('div','spacer'));
+  const pill = el('button','tagpill' + (lesson.tag === 'none' ? ' none' : ''),
+                  lesson.tag === 'none' ? '+ tag' : TAGS[lesson.tag].label);
+  pill.style.setProperty('--t', TAGS[lesson.tag].color);
+  pill.onclick = e => openTagMenu(e, c, idx, date);
+  hd.appendChild(pill);
+  card.appendChild(hd);
+
+  card.appendChild(makeTitle(lesson));
+  wrap.appendChild(card);
+
+  c.rows.forEach(r => {
+    const box = el('div','card');
+    box.appendChild(el('div','lbl', r.label));
+    box.appendChild(makeCell(lesson, r.id));
+    wrap.appendChild(box);
+  });
+  stage.appendChild(wrap);
+}
+
+/* ─────────────────────────── MONTH (one class) ─────────────────────────── */
+
+function monthCells(anchor){
+  const d = parse(anchor);
+  const first = new Date(d.getFullYear(), d.getMonth(), 1);
+  const last  = new Date(d.getFullYear(), d.getMonth()+1, 0);
+  const fw = new Date(first);
+  while (fw.getDay() === 0 || fw.getDay() === 6) fw.setDate(fw.getDate()+1);
+  const lead = fw.getDay() - 1;                      // Mon → 0 … Fri → 4
+  const days = [];
+  for (let dd = new Date(first); dd <= last; dd.setDate(dd.getDate()+1)){
+    const s = iso(dd);
+    if (isWeekday(s)) days.push(s);
+  }
+  return { lead, days };
+}
+
+function renderMonth(stage){
+  const c = course();
+  const { lead, days } = monthCells(ui.anchor);
+  const idxByDate = meetingIndexByDate(c);
+  const today = iso(new Date());
+
+  const grid = el('div','month');
+  ['Mon','Tue','Wed','Thu','Fri'].forEach(n => grid.appendChild(el('div','dow', n)));
+  for (let i = 0; i < lead; i++) grid.appendChild(el('div','mcell off'));
+
+  days.forEach(date => {
+    const cell = el('div','mcell' + (date === today ? ' today' : ''));
+    const hol = holidayOn(date);
+    if (hol){
+      cell.classList.add('hol');
+      cell.appendChild(el('div','n', String(parse(date).getDate())));
+      cell.appendChild(el('div','hn', hol.reason));
+      return grid.appendChild(cell);
+    }
+    const idx = idxByDate.get(date);
+    if (idx === undefined){
+      cell.classList.add('off');
+      cell.appendChild(el('div','n', String(parse(date).getDate())));
+      if (isCancelled(c, date)) cell.appendChild(el('div','hn','No Class'));
+      return grid.appendChild(cell);
+    }
+    const lesson = state.lessons[c.lessons[idx]];
+    if (lesson && lesson.tag !== 'none'){
+      const bar = el('div','bar');
+      bar.style.setProperty('--t', TAGS[lesson.tag].color);
+      cell.appendChild(bar);
+    }
+    cell.appendChild(el('div','n', String(parse(date).getDate())));
+    cell.appendChild(el('div','t', lesson && lesson.title ? lesson.title : ''));
+    cell.dataset.idx = String(idx);
+    cell.onclick = e => {
+      /* Month view is where a semester gets blocked out, so range-select
+         belongs here as much as in the week grid. */
+      if (e.shiftKey){ e.preventDefault(); return extendSelection(c, idx); }
+      ui.anchor = date; ui.view = 'day'; render();
+    };
+    grid.appendChild(cell);
+  });
+  stage.appendChild(grid);
+}
+
+/* ─────────────────────────── ALL CLASSES ───────────────────────────
+   Week: rows = classes, columns = weekdays, concept + tag.
+   Month: chips only — built for spotting assessment collisions.
+   Day: what every class is doing on one date.
+   ─────────────────────────────────────────────────────────────────── */
+
+/** A badge for a class: the number in its name ("Grade 7" → 7), else initials. */
+function shortLabel(name){
+  const m = String(name).match(/\d+/);
+  if (m) return m[0];
+  const letters = String(name).replace(/[^A-Za-z]/g,'');
+  return (letters.slice(0,2) || '?').toUpperCase();
+}
+
+/* The class tab bar above already maps colour to name, so the legend only
+   has to explain the marks. */
+function classLegend(){
+  const box = el('div','legend');
+  box.appendChild(el('div','k',
+    'Coloured dot = tagged · ruled line = not planned yet · ⚠ = two or more assessments'));
+  return box;
+}
+
+/** How many classes have a test or quiz on this date. */
+function collisionsOn(date){
+  return state.courses.filter(c => {
+    const l = lessonOn(c, date);
+    return l && ASSESSMENT.has(l.tag);
+  }).length;
+}
+
+function renderAllMonth(stage){
+  const { lead, days } = monthCells(ui.anchor);
+  const today = iso(new Date());
+  stage.appendChild(classLegend());
+
+  const grid = el('div','month');
+  ['Mon','Tue','Wed','Thu','Fri'].forEach(n => grid.appendChild(el('div','dow', n)));
+  for (let i = 0; i < lead; i++) grid.appendChild(el('div','mcell off multi'));
+
+  days.forEach(date => {
+    const cell = el('div','mcell multi' + (date === today ? ' today' : ''));
+    const hol = holidayOn(date);
+    if (hol){
+      cell.classList.add('hol');
+      cell.appendChild(el('div','n', String(parse(date).getDate())));
+      cell.appendChild(el('div','hn', hol.reason));
+      return grid.appendChild(cell);
+    }
+
+    const hits = collisionsOn(date);
+    if (hits >= 2) cell.classList.add('collide');
+
+    const nrow = el('div','nrow');
+    nrow.appendChild(el('div','n', String(parse(date).getDate())));
+    if (hits >= 2){
+      const w = el('div','warn');
+      w.textContent = '⚠ ' + hits;
+      w.title = hits + ' classes have a test or quiz on this day';
+      nrow.appendChild(w);
+    }
+    cell.appendChild(nrow);
+
+    state.courses.forEach(c => {
+      const row = el('div','mrow');
+      const badge = el('div','mc', shortLabel(c.name));
+      badge.style.setProperty('--c', c.color);
+      row.appendChild(badge);
+
+      const dot = el('div','md no');
+      row.appendChild(dot);
+
+      if (date < c.startDate || date > c.endDate){
+        row.classList.add('void');
+        row.appendChild(el('div','mt blank'));
+        row.title = `${c.name} · not running`;
+      } else if (isCancelled(c, date)){
+        row.appendChild(el('div','mt nc','No Class'));
+        row.title = `${c.name} · No Class`;
+      } else {
+        const l = lessonOn(c, date);
+        if (!l){
+          row.classList.add('absent');
+          row.appendChild(el('div','mt blank'));
+          row.title = `${c.name} · No Class`;
+        } else {
+          if (l.tag !== 'none'){
+            dot.classList.remove('no');
+            dot.style.setProperty('--t', TAGS[l.tag].color);
+            row.style.setProperty('--w',
+              `color-mix(in srgb, ${TAGS[l.tag].color} 12%, transparent)`);
+          }
+          row.appendChild(l.title ? el('div','mt', l.title) : el('div','mt blank'));
+          row.title = `${c.name} · ${l.title || 'Not planned'}` +
+                      (l.tag !== 'none' ? ` · ${TAGS[l.tag].label}` : '');
+          row.classList.add('live');
+          row.onclick = ev => {
+            ev.stopPropagation();
+            ui.courseId = c.id; ui.anchor = date; ui.view = 'day'; render();
+          };
+        }
+      }
+      cell.appendChild(row);
+    });
+    grid.appendChild(cell);
+  });
+  stage.appendChild(grid);
+}
+
+function renderAllWeek(stage){
+  const dates = weekDates(ui.anchor);
+  const grid = el('div','ovgrid');
+  grid.style.gridTemplateColumns = `150px repeat(${dates.length}, minmax(140px,1fr))`;
+
+  grid.appendChild(el('div',''));
+  dates.forEach(date => {
+    const h = el('div','ovhead');
+    h.appendChild(document.createTextNode(DOW3[dow(date)]));
+    const hol = holidayOn(date);
+    h.appendChild(el('small','', hol ? hol.reason : fmtShort(date)));
+    grid.appendChild(h);
+  });
+
+  state.courses.forEach(c => {
+    const label = el('div','ovclass');
+    label.style.setProperty('--c', c.color);
+    label.appendChild(el('span','', c.name));
+    label.onclick = () => { ui.courseId = c.id; ui.view = 'week'; render(); };
+    grid.appendChild(label);
+
+    const idxByDate = meetingIndexByDate(c);
+    dates.forEach(date => {
+      const hol = holidayOn(date);
+      const idx = idxByDate.get(date);
+      if (hol || idx === undefined){
+        const cell = el('div','ovcell empty');
+        cell.appendChild(el('div','t', hol ? '—' : 'No Class'));
+        return grid.appendChild(cell);
+      }
+      const lesson = state.lessons[c.lessons[idx]];
+      const cell = el('div','ovcell');
+      if (lesson && lesson.tag !== 'none'){
+        const p = el('span','tagpill', TAGS[lesson.tag].label);
+        p.style.setProperty('--t', TAGS[lesson.tag].color);
+        p.style.alignSelf = 'flex-start';
+        cell.appendChild(p);
+      }
+      /* An unplanned meeting is a ruled blank, not the word "Untitled". */
+      cell.appendChild(lesson && lesson.title
+        ? el('div','t', lesson.title) : el('div','t blank'));
+      cell.onclick = () => { ui.courseId = c.id; ui.anchor = date; ui.view = 'day'; render(); };
+      grid.appendChild(cell);
+    });
+  });
+  stage.appendChild(grid);
+}
+
+function renderAllDay(stage){
+  const date = ui.anchor;
+  const wrap = el('div','dayview');
+  const hol = holidayOn(date);
+  if (hol){
+    const card = el('div','card'), es = el('div','empty-state');
+    es.appendChild(el('b','', hol.reason));
+    es.appendChild(el('div','','No school'));
+    card.appendChild(es); wrap.appendChild(card); stage.appendChild(wrap); return;
+  }
+  state.courses.forEach(c => {
+    const card = el('div','card cls');
+    card.style.setProperty('--c', c.color);
+    const hd = el('div','hd');
+    hd.appendChild(el('h2','', c.name));
+    hd.appendChild(el('div','spacer'));
+    const l = lessonOn(c, date);
+    if (l && l.tag !== 'none'){
+      const p = el('span','tagpill', TAGS[l.tag].label);
+      p.style.setProperty('--t', TAGS[l.tag].color);
+      hd.appendChild(p);
+    }
+    card.appendChild(hd);
+    if (!l){
+      card.appendChild(el('div','note',
+        date < c.startDate ? 'Not started'
+        : date > c.endDate ? 'Finished'
+        : 'No Class'));
+    } else {
+      card.appendChild(el('div','title', l.title || ''));
+      c.rows.forEach(r => {
+        const html = l.cells[r.id];
+        if (!html || !html.replace(/<[^>]*>/g,'').trim()) return;
+        card.appendChild(el('div','lbl', r.label));
+        const body = el('div','');
+        body.innerHTML = html;
+        body.style.fontSize = '13px';
+        card.appendChild(body);
+      });
+      card.onclick = () => { ui.courseId = c.id; ui.view = 'day'; render(); };
+      card.style.cursor = 'pointer';
+    }
+    wrap.appendChild(card);
+  });
+  stage.appendChild(wrap);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MENUS
+   ═══════════════════════════════════════════════════════════════════ */
+
+/** At the cursor, or hung under an anchor element when there's one. */
+function placeMenu(e, anchor){
+  const m = $('menu');
+  m.classList.add('on');
+  const r = m.getBoundingClientRect();
+  let x, y;
+  if (anchor){
+    const a = anchor.getBoundingClientRect();
+    x = a.right - r.width; y = a.bottom + 6;
+  } else {
+    x = e.clientX ?? 0; y = e.clientY ?? 0;
+  }
+  if (x + r.width  > innerWidth  - 8) x = innerWidth  - r.width  - 8;
+  if (y + r.height > innerHeight - 8) y = innerHeight - r.height - 8;
+  m.style.left = Math.max(8, x) + 'px'; m.style.top = Math.max(8, y) + 'px';
+}
+
+/** Everything that used to be an unlabelled icon, with its name on it. */
+function openMoreMenu(e){
+  const m = $('menu'); m.innerHTML = '';
+  m.appendChild(el('div','sec','Planner'));
+  menuItem(m, 'Classes & settings', () => openPanel('classes'), '',
+           'Classes, meeting days, rows, terms, holidays');
+  menuItem(m, 'Help & shortcuts', () => openPanel('help'));
+  m.appendChild(document.createElement('hr'));
+  m.appendChild(el('div','sec','Share & back up'));
+  menuItem(m, 'Export to Excel…', () => openPanel('export'), '',
+           'A range of dates, for sharing');
+  menuItem(m, 'Export for AI…', () => openPanel('ai'), '',
+           'Readable JSON you can hand to Claude');
+  menuItem(m, 'Save a backup file', exportJson, '', 'Everything, as JSON');
+  menuItem(m, 'Open a backup file…', () => $('filepick').click());
+  m.appendChild(document.createElement('hr'));
+  menuItem(m, 'Where plans are saved…', () => openPanel('storage'), '',
+           dirHandle ? dirHandle.name : 'This browser only — not backed up');
+  placeMenu(e, $('btnMore'));
+}
+const closeMenu = () => $('menu').classList.remove('on');
+
+function menuItem(m, label, fn, cls, sub){
+  const b = el('button', cls || '');
+  if (sub){
+    const col = el('div','col');
+    col.appendChild(el('span','', label));
+    col.appendChild(el('small','', sub));
+    b.appendChild(col);
+  } else b.textContent = label;
+  b.onclick = () => { closeMenu(); fn(); };
+  m.appendChild(b);
+  return b;
+}
+
+function openDayMenu(e, c, idx, date){
+  const m = $('menu'); m.innerHTML = '';
+  m.appendChild(el('div','sec', `${DOW3[dow(date)]} ${fmtShort(date)} · lesson ${idx+1}`));
+  menuItem(m, 'Insert day before', () => insertDay(c, idx));
+  menuItem(m, 'Insert day after',  () => insertDay(c, idx+1));
+  m.appendChild(document.createElement('hr'));
+  /* The same moves as dragging, without the gesture — always available. */
+  if (idx > 0)
+    menuItem(m, 'Swap with previous day', () => swapDays(c, idx-1, idx));
+  if (idx < c.lessons.length - 1)
+    menuItem(m, 'Swap with next day',     () => swapDays(c, idx, idx+1));
+  m.appendChild(document.createElement('hr'));
+  menuItem(m, 'Duplicate day', () => duplicateDay(c, idx));
+  m.appendChild(document.createElement('hr'));
+  menuItem(m, 'Clear day', () => clearDay(c, idx), '', 'Keeps the meeting, wipes the plan');
+  menuItem(m, 'Remove day', () => removeDay(c, idx), 'danger', 'Everything after slides back');
+  m.appendChild(document.createElement('hr'));
+  menuItem(m, 'Mark “No Class”', () => cancelMeeting(c, date), '', `${c.name} skips this date`);
+  if (state.courses.length > 1){
+    m.appendChild(document.createElement('hr'));
+    m.appendChild(el('div','sec','Copy this day to'));
+    state.courses.filter(x => x.id !== c.id).forEach(other =>
+      menuItem(m, other.name, () => copyDayTo(c, idx, other, date)));
+  }
+  placeMenu(e);
+}
+
+function openTagMenu(e, c, idx, date){
+  const m = $('menu'); m.innerHTML = '';
+  m.appendChild(el('div','sec','Tag this day'));
+  Object.entries(TAGS).forEach(([k,t]) => {
+    const b = el('button','');
+    const sw = el('span','sw' + (k === 'none' ? ' none' : ''));
+    sw.style.setProperty('--t', t.color);
+    b.appendChild(sw);
+    b.appendChild(document.createTextNode(t.label));
+    b.onclick = () => {
+      closeMenu();
+      commit(k === 'none' ? 'Tag cleared' : 'Tagged ' + t.label,
+             () => { ensureLesson(c, idx).tag = k; });
+    };
+    m.appendChild(b);
+  });
+  m.appendChild(document.createElement('hr'));
+  menuItem(m, 'Mark “No Class”', () => cancelMeeting(c, date), '', `${c.name} skips this date`);
+  placeMenu(e);
+}
+
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('#menu, #btnMore')) closeMenu();
+  if (!e.target.closest('#searchbox')) closeSearch();
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   FORMAT TOOLBAR
+   ═══════════════════════════════════════════════════════════════════ */
+
+let fmtTarget = null, fmtHideTimer;
+function showFmt(cell){
+  clearTimeout(fmtHideTimer);
+  fmtTarget = cell;
+  const f = $('fmt');
+  f.classList.add('on');
+  const r = cell.getBoundingClientRect();
+  let top = r.top - 36;
+  if (top < 8) top = r.bottom + 6;
+  f.style.top = top + 'px';
+  f.style.left = Math.min(r.left, innerWidth - 150) + 'px';
+}
+function hideFmt(){
+  fmtHideTimer = setTimeout(() => { $('fmt').classList.remove('on'); fmtTarget = null; }, 140);
+}
+$('fmt').addEventListener('mousedown', e => {
+  e.preventDefault();                              // keep focus in the cell
+  const cmd = e.target.closest('button')?.dataset.cmd;
+  if (!cmd || !fmtTarget) return;
+  document.execCommand(cmd, false, null);
+  fmtTarget.dispatchEvent(new Event('input'));
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   PANEL: classes, calendar, help
+   ═══════════════════════════════════════════════════════════════════ */
+
+let panelTab = 'classes', editingId = null;
+
+function openPanel(tab){
+  panelTab = tab || panelTab;
+  const p = $('panel'); p.innerHTML = '';
+  $('scrim').classList.add('on'); p.classList.add('on');
+
+  const hd = el('div','');
+  hd.style.display = 'flex'; hd.style.alignItems = 'center'; hd.style.gap = '10px';
+  hd.appendChild(el('h3','',
+    panelTab === 'help'    ? 'Help & shortcuts'     :
+    panelTab === 'export'  ? 'Export to Excel'      :
+    panelTab === 'ai'      ? 'Export for AI'        :
+    panelTab === 'storage' ? 'Where plans are saved' : 'Classes & settings'));
+  const close = el('button','iconbtn','Close');
+  close.style.marginLeft = 'auto';
+  close.onclick = closePanel;
+  hd.appendChild(close);
+  p.appendChild(hd);
+
+  if (panelTab === 'help')    return renderHelp(p);
+  if (panelTab === 'export')  return renderExportPanel(p);
+  if (panelTab === 'ai')      return renderAiPanel(p);
+  if (panelTab === 'storage') return renderStoragePanel(p);
+  renderClassesPanel(p);
+  p.appendChild(document.createElement('hr'));
+  renderCalendarPanel(p);
+  p.appendChild(document.createElement('hr'));
+  renderStoragePanel(p);
+}
+function closePanel(){
+  $('panel').classList.remove('on');
+  $('scrim').classList.remove('on');
+}
+
+function addCourse(){
+  const id = uid();
+  commit('Class added', () => {
+    state.courses.push({
+      id, name:'New class', color: PALETTE[state.courses.length % PALETTE.length],
+      weekdays:[...WEEKDAYS], rows: mkRows(['Homework Due','Opener','Procedure']),
+      startDate: state.yearStart, endDate: state.yearEnd, terms:null, cancelled:[], lessons:[],
+    });
+    ui.courseId = id;
+  });
+  editingId = id;
+  openPanel('classes');
+}
+
+
+function renderClassesPanel(p){
+  const g = el('div','grp');
+  g.appendChild(el('label','','Classes'));
+  const list = el('div','clslist');
+  state.courses.forEach(c => {
+    const item = el('div','clsitem' + (c.id === editingId ? ' on' : ''));
+    item.style.setProperty('--c', c.color);
+    item.appendChild(el('span','dot'));
+    item.appendChild(el('span','', c.name));
+    item.appendChild(el('span','meta',
+      c.weekdays.length ? c.weekdays.map(w => DOW3[w][0]).join('') : 'never'));
+    item.onclick = () => { editingId = (editingId === c.id ? null : c.id); openPanel('classes'); };
+    list.appendChild(item);
+  });
+  g.appendChild(list);
+  const add = el('button','iconbtn','+ Add a class');
+  add.onclick = addCourse;
+  g.appendChild(add);
+
+  p.appendChild(g);
+
+  const c = state.courses.find(x => x.id === editingId);
+  if (!c) return;
+  p.appendChild(document.createElement('hr'));
+  renderClassEditor(p, c);
+}
+
+function renderClassEditor(p, c){
+  const head = el('div','grp');
+  head.appendChild(el('h4','', 'Editing ' + c.name));
+  p.appendChild(head);
+
+  /* Name */
+  const ng = el('div','grp');
+  ng.appendChild(el('label','','Name'));
+  const name = document.createElement('input');
+  name.type = 'text'; name.value = c.name;
+  name.onchange = () => commit('Class renamed', () => { c.name = name.value.trim() || c.name; });
+  ng.appendChild(name);
+  p.appendChild(ng);
+
+  /* Color */
+  const cg = el('div','grp');
+  cg.appendChild(el('label','','Colour'));
+  const sw = el('div','swatches');
+  PALETTE.forEach(col => {
+    const b = el('button','swatch' + (col === c.color ? ' on' : ''));
+    b.style.setProperty('--c', col);
+    b.onclick = () => { commit('Colour changed', () => { c.color = col; }); openPanel('classes'); };
+    sw.appendChild(b);
+  });
+  cg.appendChild(sw);
+  p.appendChild(cg);
+
+  /* Meeting days */
+  const dg = el('div','grp');
+  dg.appendChild(el('label','','Meets on'));
+  const drow = el('div','dayrow');
+  WEEKDAYS.forEach(w => {
+    const chip = el('div','daychip' + (c.weekdays.includes(w) ? ' on' : ''));
+    chip.textContent = DOW3[w];
+    chip.style.setProperty('--c', c.color);
+    chip.onclick = () => {
+      commit(`${c.name} meeting days changed`, () => {
+        c.weekdays = c.weekdays.includes(w)
+          ? c.weekdays.filter(x => x !== w)
+          : [...c.weekdays, w].sort((a,b) => a-b);
+      });
+      openPanel('classes');
+    };
+    drow.appendChild(chip);
+  });
+  dg.appendChild(drow);
+  dg.appendChild(el('div','note','Same every week. For a one-off, mark that day “No Class”.'));
+  p.appendChild(dg);
+
+  /* Date range */
+  const rg = el('div','grp');
+  rg.appendChild(el('label','','Runs from'));
+  [['startDate','First day'],['endDate','Last day']].forEach(([k,lab]) => {
+    const row = el('div','addrow');
+    const l = el('span','note', lab);
+    l.style.minWidth = '64px'; l.style.alignSelf = 'center';
+    const inp = document.createElement('input');
+    inp.type = 'date'; inp.value = c[k];
+    inp.onchange = () => commit(`${c.name} dates changed`, () => { c[k] = inp.value; });
+    row.appendChild(l); row.appendChild(inp);
+    rg.appendChild(row);
+  });
+  const over = overflowCount(c);
+  if (over > 0) rg.appendChild(el('div','note',
+    `${over} lesson${over>1?'s':''} sit past the last day — kept, not deleted. Extend the end date or remove days to bring them back.`));
+  p.appendChild(rg);
+
+  /* Terms — only if this class runs on a different rhythm to the school. */
+  const tg = el('div','grp');
+  tg.appendChild(el('label','','Terms'));
+  termEditor(tg,
+    () => c.terms,
+    v => { commit(`${c.name} terms changed`, () => { c.terms = v; }); openPanel('classes'); },
+    state.terms);
+  p.appendChild(tg);
+
+  /* Rows */
+  const rowsG = el('div','grp');
+  rowsG.appendChild(el('label','','Rows'));
+  c.rows.forEach((r, ri) => {
+    const item = el('div','rowedit');
+    item.draggable = true;
+    item.appendChild(el('span','grip','⋮⋮'));
+    const txt = el('span','txt', r.label);
+    txt.contentEditable = 'true';
+    txt.onblur = () => {
+      const v = txt.textContent.trim();
+      if (v && v !== r.label) commit('Row renamed', () => { r.label = v; });
+      else txt.textContent = r.label;
+    };
+    txt.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); txt.blur(); } };
+    item.appendChild(txt);
+    const x = el('button','x','×');
+    x.onclick = () => { commit('Row deleted', () => c.rows.splice(ri,1)); openPanel('classes'); };
+    item.appendChild(x);
+
+    item.ondragstart = e => { e.dataTransfer.setData('text/erow', String(ri)); item.classList.add('dragging'); };
+    item.ondragend   = () => item.classList.remove('dragging');
+    item.ondragover  = e => {
+      if (!e.dataTransfer.types.includes('text/erow')) return;
+      e.preventDefault(); item.classList.add('over');
+    };
+    item.ondragleave = () => item.classList.remove('over');
+    item.ondrop = e => {
+      e.preventDefault(); item.classList.remove('over');
+      const from = Number(e.dataTransfer.getData('text/erow'));
+      if (from === ri) return;
+      commit('Rows reordered', () => {
+        const [m] = c.rows.splice(from,1);
+        c.rows.splice(ri,0,m);
+      });
+      openPanel('classes');
+    };
+    rowsG.appendChild(item);
+  });
+  const addRow = el('div','addrow');
+  const rin = document.createElement('input');
+  rin.type = 'text'; rin.placeholder = 'New row name';
+  const rbtn = el('button','','Add');
+  const doAdd = () => {
+    const v = rin.value.trim(); if (!v) return;
+    commit('Row added', () => c.rows.push({ id:uid(), label:v }));
+    openPanel('classes');
+  };
+  rbtn.onclick = doAdd;
+  rin.onkeydown = e => { if (e.key === 'Enter') doAdd(); };
+  addRow.appendChild(rin); addRow.appendChild(rbtn);
+  rowsG.appendChild(addRow);
+  p.appendChild(rowsG);
+
+  /* No-Class days */
+  if (c.cancelled.length){
+    const ncg = el('div','grp');
+    ncg.appendChild(el('label','','No Class days'));
+    c.cancelled.slice().sort((a,b) => a.date < b.date ? -1 : 1).forEach(x => {
+      const item = el('div','holitem');
+      item.appendChild(el('span','d', fmtMed(x.date)));
+      item.appendChild(el('span','r', x.reason || 'No Class'));
+      const b = el('button','x','×');
+      b.title = 'Restore';
+      b.onclick = () => { restoreMeeting(c, x.date); openPanel('classes'); };
+      item.appendChild(b);
+      ncg.appendChild(item);
+    });
+    p.appendChild(ncg);
+  }
+
+  /* Delete */
+  const del = el('div','grp');
+  const db = el('button','iconbtn','Delete ' + c.name);
+  db.onclick = () => {
+    if (!confirm(`Delete ${c.name} and all of its lessons? This can be undone with Cmd+Z.`)) return;
+    commit(`${c.name} deleted`, () => {
+      /* Drop the lessons too — otherwise they sit in state.lessons forever,
+         unreachable and growing the file. Undo restores them with the snapshot. */
+      c.lessons.forEach(id => delete state.lessons[id]);
+      state.courses = state.courses.filter(x => x.id !== c.id);
+      if (ui.courseId === c.id) ui.courseId = state.courses[0] ? state.courses[0].id : ALL;
+    });
+    editingId = null;
+    openPanel('classes');
+  };
+  del.appendChild(db);
+  p.appendChild(del);
+}
+
+/** Term picker, shared by the school default and a class's override.
+    `get` returns the current config or null; `set` persists a new one. */
+function termEditor(box, get, set, inherited){
+  const t = get(), canInherit = !!inherited;
+  const chips = el('div','dayrow');
+  const modes = canInherit ? [['inherit','Same as school']] : [];
+  Object.entries(TERM_MODES).forEach(([k,m]) => modes.push([k, m.label]));
+
+  modes.forEach(([k,label]) => {
+    const on = k === 'inherit' ? !t : (!!t && t.mode === k);
+    const chip = el('div','daychip' + (on ? ' on' : ''), label);
+    chip.style.setProperty('--c','var(--accent)');
+    chip.onclick = () => {
+      if (k === 'inherit') return set(null);
+      const n = TERM_MODES[k].n || Math.max(2, (t ? t.starts.length : 2));
+      set({ mode:k, starts: spreadTerms(state.yearStart, state.yearEnd, n) });
+    };
+    chips.appendChild(chip);
+  });
+  box.appendChild(chips);
+
+  const eff = t || inherited;
+  if (!eff) return;
+  if (!t){
+    box.appendChild(el('div','note',
+      `Following the school — ${eff.starts.length} term${eff.starts.length>1?'s':''}.`));
+    return;
+  }
+
+  const abbr = TERM_MODES[eff.mode].abbr || 'T';
+  eff.starts.forEach((s, i) => {
+    if (i === 0) return;                       // term 1 always opens with the year
+    const row = el('div','addrow');
+    const l = el('span','note', `${abbr}${i+1} starts`);
+    l.style.minWidth = '78px'; l.style.alignSelf = 'center';
+    const inp = document.createElement('input');
+    inp.type = 'date'; inp.value = s;
+    inp.onchange = () => {
+      const starts = [...eff.starts];
+      starts[i] = inp.value || s;
+      set({ mode:eff.mode, starts: starts.sort() });
+    };
+    row.appendChild(l); row.appendChild(inp);
+    if (eff.mode === 'custom'){
+      const x = el('button','x','×');
+      x.style.color = 'var(--faint)'; x.style.fontSize = '15px';
+      x.onclick = () => set({ mode:'custom', starts: eff.starts.filter((_,k) => k !== i) });
+      row.appendChild(x);
+    }
+    box.appendChild(row);
+  });
+
+  if (eff.mode === 'custom'){
+    const add = el('button','iconbtn','+ Add a term');
+    add.onclick = () => set({
+      mode:'custom',
+      starts:[...eff.starts, weekStart(state.yearEnd)].sort(),
+    });
+    box.appendChild(add);
+  }
+  box.appendChild(el('div','note','Week numbers count from the start of the current term.'));
+}
+
+function renderCalendarPanel(p){
+  const yg = el('div','grp');
+  yg.appendChild(el('label','','School year'));
+  [['yearStart','First day'],['yearEnd','Last day']].forEach(([k,lab]) => {
+    const row = el('div','addrow');
+    const l = el('span','note', lab);
+    l.style.minWidth = '64px'; l.style.alignSelf = 'center';
+    const inp = document.createElement('input');
+    inp.type = 'date'; inp.value = state[k];
+    inp.onchange = () => {
+      commit('School year changed', () => {
+        state[k] = inp.value;
+        /* Term one opens with the year by definition — keep it pinned. */
+        if (k === 'yearStart' && state.terms && state.terms.starts.length)
+          state.terms.starts[0] = inp.value;
+      });
+      openPanel('classes');
+    };
+    row.appendChild(l); row.appendChild(inp);
+    yg.appendChild(row);
+  });
+  p.appendChild(yg);
+
+  const tg = el('div','grp');
+  tg.appendChild(el('label','','Terms'));
+  termEditor(tg,
+    () => state.terms,
+    v => { commit('Terms changed', () => { state.terms = v || state.terms; }); openPanel('classes'); },
+    null);
+  p.appendChild(tg);
+
+  const hg = el('div','grp');
+  hg.appendChild(el('label','','Holidays'));
+  state.holidays.slice().sort((a,b) => a.date < b.date ? -1 : 1).forEach(h => {
+    const item = el('div','holitem');
+    item.appendChild(el('span','d', fmtMed(h.date) + (h.endDate ? '–' + fmtMed(h.endDate) : '')));
+    item.appendChild(el('span','r', h.reason));
+    const x = el('button','x','×');
+    x.onclick = () => {
+      commit('Holiday removed · all classes shifted back', () => {
+        state.holidays = state.holidays.filter(q => q.id !== h.id);
+      });
+      openPanel('classes');
+    };
+    item.appendChild(x);
+    hg.appendChild(item);
+  });
+  const arow = el('div','addrow');
+  const hd = document.createElement('input'); hd.type = 'date';
+  const hr = document.createElement('input'); hr.type = 'text'; hr.placeholder = 'Reason';
+  const hb = el('button','','Add');
+  hb.onclick = () => {
+    if (!hd.value) return toast('Pick a date');
+    commit('Holiday added · all classes shifted', () => {
+      state.holidays.push({ id:uid(), date:hd.value, reason:hr.value || 'No school' });
+    });
+    openPanel('classes');
+  };
+  arow.appendChild(hd); arow.appendChild(hr); arow.appendChild(hb);
+  hg.appendChild(arow);
+  hg.appendChild(el('div','note','Applies to every class at once, and undoes as one action.'));
+  p.appendChild(hg);
+
+}
+
+/* Remembered between openings so a second export doesn't re-pick everything. */
+let exportPick = null;
+
+function renderExportPanel(p){
+  const [d0,d1] = currentRange();
+  if (!exportPick)
+    exportPick = { from:d0, to:d1, ids:state.courses.map(c => c.id), off:false };
+  else if (!exportPick.touched) { exportPick.from = d0; exportPick.to = d1; }
+
+  const rg = el('div','grp');
+  rg.appendChild(el('label','','Dates'));
+  [['from','First day'],['to','Last day']].forEach(([k,lab]) => {
+    const row = el('div','addrow');
+    const l = el('span','note', lab);
+    l.style.minWidth = '64px'; l.style.alignSelf = 'center';
+    const inp = document.createElement('input');
+    inp.type = 'date'; inp.value = exportPick[k];
+    inp.onchange = () => { exportPick[k] = inp.value; exportPick.touched = true; openPanel('export'); };
+    row.appendChild(l); row.appendChild(inp);
+    rg.appendChild(row);
+  });
+  p.appendChild(rg);
+
+  const cg = el('div','grp');
+  cg.appendChild(el('label','','Classes'));
+  state.courses.forEach(c => {
+    const on = exportPick.ids.includes(c.id);
+    const item = el('div','clsitem' + (on ? ' on' : ''));
+    item.style.setProperty('--c', c.color);
+    item.appendChild(el('span','dot'));
+    item.appendChild(el('span','', c.name));
+    const n = exportDays(c, exportPick.from, exportPick.to, exportPick.off)
+                .filter(d => d.idx !== null).length;
+    item.appendChild(el('span','meta', on ? `${n} day${n===1?'':'s'}` : '—'));
+    item.onclick = () => {
+      exportPick.ids = on ? exportPick.ids.filter(x => x !== c.id) : [...exportPick.ids, c.id];
+      openPanel('export');
+    };
+    cg.appendChild(item);
+  });
+  p.appendChild(cg);
+
+  const og = el('div','grp');
+  og.appendChild(el('label','','Days with no class'));
+  const row = el('div','dayrow');
+  [[false,'Leave out'],[true,'Show them']].forEach(([v,lab]) => {
+    const chip = el('div','daychip' + (exportPick.off === v ? ' on' : ''), lab);
+    chip.style.setProperty('--c','var(--accent)');
+    chip.onclick = () => { exportPick.off = v; openPanel('export'); };
+    row.appendChild(chip);
+  });
+  og.appendChild(row);
+  og.appendChild(el('div','note', exportPick.off
+    ? 'Holidays, No Class days and days off the timetable each get a greyed column saying why.'
+    : 'Only the days the class actually meets.'));
+  p.appendChild(og);
+
+  const go = el('div','grp');
+  const b = el('button','cta','Export to Excel');
+  b.onclick = () => {
+    if (exportPick.from > exportPick.to) return toast('That range runs backwards');
+    const picked = state.courses.filter(c => exportPick.ids.includes(c.id));
+    if (!picked.length) return toast('Pick at least one class');
+    try {
+      download(buildXlsx(picked, exportPick.from, exportPick.to, exportPick.off),
+        safeName(`Lesson Plans ${fmtMed(exportPick.from)} to ${fmtMed(exportPick.to)}`) + '.xlsx');
+      toast('Exported');
+      closePanel();
+    } catch(err){ console.error(err); toast('Export failed'); }
+  };
+  go.appendChild(b);
+  go.appendChild(el('div','note','One sheet per class.'));
+  p.appendChild(go);
+}
+
+function renderHelp(p){
+  const rows = [
+    ['Drag a day', 'Grab the ⋮⋮ grip in a day’s header, or the header itself.'],
+    ['Drop onto a day', 'Swaps the two days. Nothing else moves. This is most of the column — you don’t have to aim.'],
+    ['Drop between days', 'Inserts the day there and pushes everything after it forward one meeting. Aim for the line between two days.'],
+    ['While dragging', 'The label under the cursor always says what releasing will do. Grey means nothing will change.'],
+    ['Escape while dragging', 'Cancels — nothing is changed.'],
+    ['Right-click a day', 'Insert, swap with a neighbour, duplicate, clear, remove, or mark No Class — the same moves without dragging.'],
+    ['Clear day', 'The class still met; the plan is wiped. Nothing else moves.'],
+    ['Remove day', 'The meeting shouldn’t exist. Everything after slides back one.'],
+    ['Mark “No Class”', 'That one class skips the date and shifts forward, like a private holiday.'],
+    ['Drag a row label', 'Reorders rows for that class.'],
+    ['Click a row label', 'Rename it in place.'],
+    ['Shift-click day headers', 'Selects a run of days. Tag them all at once from the bar that appears — the quick way to block out a semester.'],
+    ['Right-click a cell', 'Copy, cut, paste or clear just that cell.'],
+    ['Right-click a day', 'Ends with “Copy this day to” — sends the whole lesson to another class on the same date. Rows are matched by name, and anything missing is named in the message.'],
+  ];
+  const keys = [
+    ['<kbd>⌘</kbd> <kbd>K</kbd>', 'Search every class'],
+    ['<kbd>⌘</kbd> <kbd>Z</kbd>', 'Undo — a whole ripple undoes in one press'],
+    ['<kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>Z</kbd>', 'Redo'],
+    ['<kbd>Tab</kbd>', 'Next box down the day, then on to the next day'],
+    ['<kbd>⌥</kbd> <kbd>←</kbd> <kbd>→</kbd>', 'Same box, previous / next day'],
+    ['<kbd>←</kbd> <kbd>→</kbd>', 'Previous / next day, week or month'],
+    ['<kbd>Esc</kbd>', 'Leave a box, drop a selection, close a menu, or cancel a drag'],
+  ];
+  const g1 = el('div','grp');
+  g1.appendChild(el('label','','Moving days around'));
+  rows.forEach(([g,d]) => {
+    const r = el('div','helprow');
+    r.appendChild(el('div','g', g));
+    r.appendChild(el('div','d', d));
+    g1.appendChild(r);
+  });
+  p.appendChild(g1);
+
+  const g2 = el('div','grp');
+  g2.appendChild(el('label','','Keyboard'));
+  keys.forEach(([k,d]) => {
+    const r = el('div','helprow');
+    const kk = el('div','g'); kk.innerHTML = k;
+    r.appendChild(kk);
+    r.appendChild(el('div','d', d));
+    g2.appendChild(r);
+  });
+  p.appendChild(g2);
+
+  const g3 = el('div','grp');
+  g3.appendChild(el('label','','How the schedule works'));
+  g3.appendChild(el('div','note',
+    'Lessons are an ordered list, not a set of dates. Each class has the weekdays it meets, and the app lays the list onto those dates in order. That’s why inserting one day pushes everything after it forward automatically, and why a holiday shifts every class by one of its own meetings.'));
+  p.appendChild(g3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   XLSX WRITER
+   ───────────────────────────────────────────────────────────────────
+   An .xlsx is a ZIP of XML parts. Storing the parts uncompressed
+   (method 0) is legal and Excel accepts it, which means no deflate
+   implementation and no vendored library — worth a few hundred KB of
+   uncompressed XML to keep this one file dependency-free.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++){
+    let c = i;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[i] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(bytes){
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+/** files: [{name, text}] → a Blob holding a store-only ZIP archive. */
+function zipStore(files, mime){
+  const enc = new TextEncoder();
+  const now = new Date();
+  const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+  const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+
+  const body = [], dir = [];
+  let offset = 0;
+
+  files.forEach(f => {
+    const name = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data);
+
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true);
+    lh.setUint16(4, 20, true);
+    lh.setUint16(6, 0x0800, true);          // UTF-8 names
+    lh.setUint16(8, 0, true);               // stored
+    lh.setUint16(10, time, true);
+    lh.setUint16(12, date, true);
+    lh.setUint32(14, crc, true);
+    lh.setUint32(18, data.length, true);
+    lh.setUint32(22, data.length, true);
+    lh.setUint16(26, name.length, true);
+    body.push(new Uint8Array(lh.buffer), name, data);
+
+    const cd = new DataView(new ArrayBuffer(46));
+    cd.setUint32(0, 0x02014b50, true);
+    cd.setUint16(4, 20, true);
+    cd.setUint16(6, 20, true);
+    cd.setUint16(8, 0x0800, true);
+    cd.setUint16(10, 0, true);
+    cd.setUint16(12, time, true);
+    cd.setUint16(14, date, true);
+    cd.setUint32(16, crc, true);
+    cd.setUint32(20, data.length, true);
+    cd.setUint32(24, data.length, true);
+    cd.setUint16(28, name.length, true);
+    cd.setUint32(42, offset, true);
+    dir.push(new Uint8Array(cd.buffer), name);
+
+    offset += 30 + name.length + data.length;
+  });
+
+  const dirSize = dir.reduce((n,a) => n + a.length, 0);
+  const eocd = new DataView(new ArrayBuffer(22));
+  eocd.setUint32(0, 0x06054b50, true);
+  eocd.setUint16(8, files.length, true);
+  eocd.setUint16(10, files.length, true);
+  eocd.setUint32(12, dirSize, true);
+  eocd.setUint32(16, offset, true);
+
+  return new Blob([...body, ...dir, new Uint8Array(eocd.buffer)], { type: mime });
+}
+
+/* ── XML + cell helpers ─────────────────────────────────────────── */
+
+/* Control characters are illegal in XML and make Excel reject the whole
+   file, so they're dropped — tab and newline survive. */
+const xmlEsc = s => String(s)
+  .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'')
+  .replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[ch]));
+
+function colName(n){                        // 1 → A, 27 → AA
+  let s = '';
+  while (n > 0){ const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = (n - 1 - r) / 26; }
+  return s;
+}
+
+/** A cell's rich HTML as plain text, keeping list structure — a naive tag
+    strip runs every bullet together into one line. */
+function htmlToText(html){
+  if (!html) return '';
+  const box = document.createElement('div');
+  box.innerHTML = html;
+  const out = [];
+  const walk = node => {
+    node.childNodes.forEach(n => {
+      if (n.nodeType === 3) return out.push(n.nodeValue);
+      if (n.nodeType !== 1) return;
+      const tag = n.tagName;
+      if (tag === 'BR') return out.push('\n');
+      if (tag === 'UL' || tag === 'OL'){
+        let i = 1;
+        n.childNodes.forEach(li => {
+          if (li.nodeType !== 1 || li.tagName !== 'LI') return;
+          out.push('\n' + (tag === 'OL' ? (i++) + '. ' : '• '));
+          walk(li);
+        });
+        return out.push('\n');
+      }
+      if (tag === 'P' || tag === 'DIV'){ out.push('\n'); walk(n); return out.push('\n'); }
+      walk(n);
+    });
+  };
+  walk(box);
+  return out.join('')
+    .replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n')
+    .replace(/\n{3,}/g,'\n\n').trim();
+}
+
+/* ── the workbook ───────────────────────────────────────────────── */
+
+const TAG_KEYS = Object.keys(TAGS).filter(k => k !== 'none');
+const XF = { plain:0, title:1, dayhead:2, rowlabel:3, body:4, concept:5 };
+const xfForTag = k => 6 + TAG_KEYS.indexOf(k);      // tag row, white on colour
+const XF_OFF = 6 + TAG_KEYS.length;                 // a day the class doesn't meet
+
+function stylesXml(){
+  const fills = ['<fill><patternFill patternType="none"/></fill>',
+                 '<fill><patternFill patternType="gray125"/></fill>',
+                 '<fill><patternFill patternType="solid"><fgColor rgb="FFF2F2F2"/>' +
+                   '<bgColor indexed="64"/></patternFill></fill>']
+    .concat(TAG_KEYS.map(k =>
+      `<fill><patternFill patternType="solid"><fgColor rgb="FF${TAGS[k].color.slice(1).toUpperCase()}"/>` +
+      `<bgColor indexed="64"/></patternFill></fill>`));
+
+  const box = '<border><left style="thin"><color rgb="FFD9D9D9"/></left>' +
+              '<right style="thin"><color rgb="FFD9D9D9"/></right>' +
+              '<top style="thin"><color rgb="FFD9D9D9"/></top>' +
+              '<bottom style="thin"><color rgb="FFD9D9D9"/></bottom></border>';
+
+  const xfs = [
+    '<xf xfId="0" fontId="0" fillId="0" borderId="0"/>',
+    '<xf xfId="0" fontId="2" fillId="0" borderId="0" applyFont="1"/>',
+    '<xf xfId="0" fontId="1" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1"' +
+      ' applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>',
+    '<xf xfId="0" fontId="1" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1"' +
+      ' applyAlignment="1"><alignment horizontal="left" vertical="top" wrapText="1"/></xf>',
+    '<xf xfId="0" fontId="0" fillId="0" borderId="1" applyBorder="1" applyAlignment="1">' +
+      '<alignment horizontal="left" vertical="top" wrapText="1"/></xf>',
+    '<xf xfId="0" fontId="1" fillId="0" borderId="1" applyFont="1" applyBorder="1" applyAlignment="1">' +
+      '<alignment horizontal="left" vertical="top" wrapText="1"/></xf>',
+  ].concat(TAG_KEYS.map((k,i) =>
+    `<xf xfId="0" fontId="3" fillId="${3+i}" borderId="1" applyFont="1" applyFill="1"` +
+    ' applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'))
+   .concat([
+    '<xf xfId="0" fontId="4" fillId="2" borderId="1" applyFont="1" applyFill="1"' +
+      ' applyBorder="1" applyAlignment="1">' +
+      '<alignment horizontal="center" vertical="center" wrapText="1"/></xf>',
+   ]);
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="5">
+<font><sz val="11"/><name val="Calibri"/></font>
+<font><b/><sz val="11"/><name val="Calibri"/></font>
+<font><b/><sz val="14"/><name val="Calibri"/></font>
+<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
+<font><i/><sz val="10"/><color rgb="FF8C8C8C"/><name val="Calibri"/></font>
+</fonts>
+<fills count="${fills.length}">${fills.join('')}</fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>${box}</borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="${xfs.length}">${xfs.join('')}</cellXfs>
+</styleSheet>`;
+}
+
+const cellXml = (ref, style, text) =>
+  text === '' || text === undefined || text === null
+    ? `<c r="${ref}" s="${style}"/>`
+    : `<c r="${ref}" s="${style}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(text)}</t></is></c>`;
+
+/**
+ * The columns a sheet gets. By default only the days the class actually
+ * meets — a plan shows what you teach. With `includeOff` every weekday in
+ * the range appears, so a principal can see why a gap is there.
+ */
+function exportDays(c, from, to, includeOff){
+  const idxByDate = meetingIndexByDate(c);
+  const out = [];
+  for (let d = from; d <= to; d = addDays(d, 1)){
+    if (!isWeekday(d)) continue;
+    const idx = idxByDate.get(d);
+    if (idx !== undefined){ out.push({ date:d, idx }); continue; }
+    if (!includeOff) continue;
+    const hol = holidayOn(d);
+    out.push({ date:d, idx:null,
+      note: hol ? hol.reason
+          : (d < c.startDate || d > c.endDate) ? 'Not running'
+          : 'No Class' });
+  }
+  return out;
+}
+
+/** One sheet per class: days across, that class's own rows down the side. */
+function sheetXml(c, days){
+  const lessons = days.map(d => d.idx === null ? null : state.lessons[c.lessons[d.idx]] || null);
+  const tagged  = lessons.some(l => l && l.tag && l.tag !== 'none');
+  const width   = days.length + 1;
+  const rows    = [];
+  let r = 1;
+
+  const push = (cells, height) => {
+    rows.push(`<row r="${r}"${height ? ` ht="${height}" customHeight="1"` : ''}>${cells.join('')}</row>`);
+    r++;
+  };
+  const ref = i => `${colName(i+2)}${r}`;
+
+  push([cellXml('A1', XF.title, `${c.name.toUpperCase()} · ` +
+    (days.length ? fmtRange(days[0].date, days[days.length-1].date) : 'no meetings'))], 22);
+
+  push([cellXml(`A${r}`, XF.dayhead, '')].concat(
+    days.map((d,i) => cellXml(ref(i), XF.dayhead, `${DOW3[dow(d.date)]} ${fmtShort(d.date)}`))), 20);
+
+  push([cellXml(`A${r}`, XF.rowlabel, 'Concept')].concat(
+    days.map((d,i) => d.idx === null
+      ? cellXml(ref(i), XF_OFF, d.note)
+      : cellXml(ref(i), XF.concept, (lessons[i] && lessons[i].title) || ''))), 20);
+
+  if (tagged)
+    push([cellXml(`A${r}`, XF.rowlabel, 'Tag')].concat(
+      days.map((d,i) => {
+        if (d.idx === null) return cellXml(ref(i), XF_OFF, '');
+        const t = lessons[i] && lessons[i].tag;
+        return t && t !== 'none'
+          ? cellXml(ref(i), xfForTag(t), TAGS[t].label.toUpperCase())
+          : cellXml(ref(i), XF.body, '');
+      })), 18);
+
+  c.rows.forEach(row => {
+    const texts = lessons.map(l => l ? htmlToText(l.cells[row.id]) : '');
+    const lines = texts.reduce((n,t) => Math.max(n, t ? t.split('\n').length : 1), 1);
+    push([cellXml(`A${r}`, XF.rowlabel, row.label)].concat(
+      days.map((d,i) => cellXml(ref(i), d.idx === null ? XF_OFF : XF.body, texts[i]))),
+      Math.max(20, Math.min(150, lines * 14 + 6)));
+  });
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<dimension ref="A1:${colName(width)}${r-1}"/>
+<sheetViews><sheetView workbookViewId="0">
+<pane xSplit="1" ySplit="2" topLeftCell="B3" activePane="bottomRight" state="frozen"/>
+</sheetView></sheetViews>
+<sheetFormatPr defaultRowHeight="15"/>
+<cols><col min="1" max="1" width="20" customWidth="1"/>
+<col min="2" max="${Math.max(2,width)}" width="30" customWidth="1"/></cols>
+<sheetData>${rows.join('')}</sheetData>
+<mergeCells count="1"><mergeCell ref="A1:${colName(width)}1"/></mergeCells>
+<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>
+<pageSetup orientation="landscape" fitToWidth="1"/>
+</worksheet>`;
+}
+
+function buildXlsx(courses, from, to, includeOff){
+  const used = new Set();
+  const sheetName = name => {
+    /* Excel: 31 chars, no []:*?/\ , and no duplicates. */
+    let s = String(name).replace(/[\[\]:*?\/\\]/g,'').trim().slice(0,31) || 'Sheet';
+    const base = s.slice(0,28); let i = 2;
+    while (used.has(s.toLowerCase())) s = `${base} ${i++}`;
+    used.add(s.toLowerCase());
+    return s;
+  };
+
+  const sheets = courses.map((c,i) => ({
+    course: c,
+    name: sheetName(c.name),
+    days: exportDays(c, from, to, includeOff),
+    file: `xl/worksheets/sheet${i+1}.xml`,
+    rid: `rId${i+1}`,
+  }));
+
+  const files = [
+    { name:'[Content_Types].xml', text:
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+${sheets.map(s => `<Override PartName="/${s.file}" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('\n')}
+</Types>` },
+
+    { name:'_rels/.rels', text:
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>` },
+
+    { name:'xl/workbook.xml', text:
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets>${sheets.map((s,i) => `<sheet name="${xmlEsc(s.name)}" sheetId="${i+1}" r:id="${s.rid}"/>`).join('')}</sheets>
+</workbook>` },
+
+    { name:'xl/_rels/workbook.xml.rels', text:
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+${sheets.map(s => `<Relationship Id="${s.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/${s.file.split('/').pop()}"/>`).join('\n')}
+<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>` },
+
+    { name:'xl/styles.xml', text: stylesXml() },
+  ];
+
+  sheets.forEach(s => files.push({ name:s.file, text: sheetXml(s.course, s.days) }));
+
+  return zipStore(files,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+
+/** The span the current view is showing — the sensible default to export. */
+function currentRange(){
+  if (ui.view === 'day')   return [ui.anchor, ui.anchor];
+  if (ui.view === 'month'){
+    const { days } = monthCells(ui.anchor);
+    return days.length ? [days[0], days[days.length-1]] : [ui.anchor, ui.anchor];
+  }
+  const d = weekDates(ui.anchor);
+  return [d[0], d[d.length-1]];
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   IMPORT / EXPORT
+   ═══════════════════════════════════════════════════════════════════ */
+
+/** Filenames can't carry these on Windows or macOS. */
+const safeName = s => String(s).replace(/[\/\\:*?"<>|]+/g,'-').replace(/\s+/g,' ').trim();
+
+/** Shared download plumbing. The revoke is deferred — doing it synchronously
+    after click() races the browser on anything larger than a small JSON. */
+function download(blob, filename){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+function exportJson(){
+  download(new Blob([JSON.stringify(state,null,2)], { type:'application/json' }),
+           `lesson-planner-${iso(new Date())}.json`);
+  localStorage.setItem(EXPORT_KEY, String(Date.now()));
+  paintStorageBadge();
+  toast('Exported');
+}
+function importJson(file){
+  const fr = new FileReader();
+  fr.onload = () => {
+    try {
+      const data = JSON.parse(fr.result);
+      if (!data.courses || !data.lessons) throw new Error('Not a planner file');
+      commit('Imported', () => {
+        state = migrate(data);
+        ui.courseId = state.courses[0] ? state.courses[0].id : ALL;
+      });
+    } catch(err){ toast('Could not read that file'); }
+  };
+  fr.readAsText(file);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SEARCH
+   ═══════════════════════════════════════════════════════════════════ */
+
+let searchHits = [], searchAt = 0;
+
+function snippet(text, needle){
+  const at = text.toLowerCase().indexOf(needle);
+  if (at < 0) return text.slice(0, 90);
+  const s = Math.max(0, at - 30);
+  return (s ? '…' : '') + text.slice(s, at + needle.length + 60).trim() + '…';
+}
+
+/** Walk course.lessons — never state.lessons, which can hold strays. */
+function runSearch(q){
+  const needle = q.trim().toLowerCase();
+  if (needle.length < 2) return [];
+  const out = [];
+  state.courses.forEach(c => {
+    const dates = meetingDates(c);
+    c.lessons.forEach((id, i) => {
+      const l = state.lessons[id]; if (!l) return;
+      const parts = [];
+      if (l.title) parts.push(l.title);
+      c.rows.forEach(r => { const t = htmlToText(l.cells[r.id]); if (t) parts.push(t); });
+      const blob = parts.join(' · ');
+      if (!blob.toLowerCase().includes(needle)) return;
+      out.push({ course:c, lesson:l, idx:i, date: dates[i] || null,
+                 snip: snippet(blob, needle), needle });
+    });
+  });
+  out.sort((a,b) => (a.date || '9999') < (b.date || '9999') ? -1 : 1);
+  return out.slice(0, 80);
+}
+
+function renderHits(){
+  const box = $('searchHits'); box.innerHTML = '';
+  const q = $('searchInput').value.trim();
+  if (!q){ box.classList.remove('on'); return; }
+  box.classList.add('on');
+  if (!searchHits.length){
+    box.appendChild(el('div','none', q.length < 2 ? 'Type at least two letters' : 'Nothing found'));
+    return;
+  }
+  searchHits.forEach((h, i) => {
+    const row = el('div','hit' + (i === searchAt ? ' on' : ''));
+    const badge = el('div','mc', shortLabel(h.course.name));
+    badge.style.setProperty('--c', h.course.color);
+    row.appendChild(badge);
+    row.appendChild(el('div','d', h.date ? fmtMed(h.date) : 'past end'));
+    row.appendChild(el('div','t', h.lesson.title || '—'));
+    const s = el('div','s');
+    /* Highlight the match without letting stored text become markup. */
+    const at = h.snip.toLowerCase().indexOf(h.needle);
+    if (at < 0) s.textContent = h.snip;
+    else {
+      s.appendChild(document.createTextNode(h.snip.slice(0, at)));
+      s.appendChild(el('mark','', h.snip.slice(at, at + h.needle.length)));
+      s.appendChild(document.createTextNode(h.snip.slice(at + h.needle.length)));
+    }
+    row.appendChild(s);
+    row.onmouseenter = () => { searchAt = i; renderHits(); };
+    row.onclick = () => gotoHit(h);
+    box.appendChild(row);
+  });
+  const on = box.querySelector('.hit.on');
+  if (on) on.scrollIntoView({ block:'nearest' });
+}
+
+function gotoHit(h){
+  closeSearch();
+  $('searchInput').blur();
+  if (!h.date) return toast('That lesson sits past the end of the year');
+  ui.courseId = h.course.id; ui.anchor = h.date; ui.view = 'day';
+  daySel = null; render();
+}
+
+function openSearch(){
+  const inp = $('searchInput');
+  inp.focus(); inp.select();
+  if (searchHits.length) $('searchHits').classList.add('on');
+}
+function closeSearch(){
+  $('searchHits').classList.remove('on');
+}
+const searchIsOpen = () => $('searchHits').classList.contains('on');
+
+/* ═══════════════════════════════════════════════════════════════════
+   CLIPBOARD — cells, and whole days across classes
+   ═══════════════════════════════════════════════════════════════════ */
+
+let cellClip = null;                     // { label, html }
+
+function openCellMenu(e, c, idx, row){
+  const m = $('menu'); m.innerHTML = '';
+  const lesson = state.lessons[c.lessons[idx]];
+  if (!lesson) return;
+  const html = lesson.cells[row.id] || '';
+  const filled = !!htmlToText(html);
+
+  m.appendChild(el('div','sec', row.label));
+  if (filled){
+    menuItem(m, 'Copy', () => { cellClip = { label:row.label, html }; toast('Cell copied'); });
+    menuItem(m, 'Cut', () => {
+      cellClip = { label:row.label, html };
+      commit('Cell cut', () => { lesson.cells[row.id] = ''; });
+    });
+  }
+  if (cellClip)
+    menuItem(m, 'Paste', () => commit('Cell pasted', () => { lesson.cells[row.id] = cellClip.html; }),
+             '', cellClip.label === row.label ? '' : `from ${cellClip.label}`);
+  if (filled)
+    menuItem(m, 'Clear', () => commit('Cell cleared', () => { lesson.cells[row.id] = ''; }), 'danger');
+  placeMenu(e);
+}
+
+/**
+ * Copy a whole day into another class on the same date. Rows are per-class
+ * with their own ids, so they're matched by LABEL — and anything the target
+ * has no row for is reported rather than dropped in silence.
+ */
+function copyDayTo(from, idx, to, date){
+  const tIdx = meetingIndexByDate(to).get(date);
+  if (tIdx === undefined) return toast(`${to.name} has no class on ${fmtMed(date)}`);
+  const src = state.lessons[from.lessons[idx]];
+  if (!src) return;
+
+  const byLabel = new Map(to.rows.map(r => [r.label.trim().toLowerCase(), r.id]));
+  const moved = {}, missing = [];
+  from.rows.forEach(r => {
+    const html = src.cells[r.id];
+    if (!html || !htmlToText(html)) return;
+    const target = byLabel.get(r.label.trim().toLowerCase());
+    if (target) moved[target] = html; else missing.push(r.label);
+  });
+
+  const note = missing.length ? ` · no row for ${missing.join(', ')}` : '';
+  commit(`Copied to ${to.name}${note}`, () => {
+    const dst = ensureLesson(to, tIdx);
+    dst.title = src.title; dst.tag = src.tag;
+    dst.cells = Object.assign({}, dst.cells, moved);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DAY SELECTION — shift-click a run, then tag it in one go
+   ═══════════════════════════════════════════════════════════════════ */
+
+let daySel = null;               // { courseId, from, to } — sequence indices
+
+function selRange(){
+  if (!daySel) return null;
+  return [Math.min(daySel.from, daySel.to), Math.max(daySel.from, daySel.to)];
+}
+
+function extendSelection(c, idx){
+  if (!daySel || daySel.courseId !== c.id) daySel = { courseId:c.id, from:idx, to:idx };
+  else daySel.to = idx;
+  paintSelection();
+}
+function clearSelection(){
+  if (!daySel) return false;
+  daySel = null; paintSelection(); return true;
+}
+
+function paintSelection(){
+  document.querySelectorAll('.selected').forEach(n => n.classList.remove('selected'));
+  const bar = $('selbar');
+  const r = selRange();
+  if (!r || isAll() || !course() || course().id !== daySel.courseId){
+    bar.classList.remove('on'); bar.innerHTML = '';
+    return;
+  }
+  const [a,b] = r;
+  document.querySelectorAll('[data-idx]').forEach(n => {
+    const i = Number(n.dataset.idx);
+    if (i >= a && i <= b) n.classList.add('selected');
+  });
+
+  const n = b - a + 1;
+  bar.innerHTML = '';
+  bar.appendChild(el('span','n', `${n} day${n === 1 ? '' : 's'}`));
+  Object.entries(TAGS).forEach(([k,t]) => {
+    if (k === 'none') return;
+    const btn = el('button','', t.label);
+    btn.style.setProperty('--t', t.color);
+    btn.onclick = () => tagSelection(k);
+    bar.appendChild(btn);
+  });
+  const clr = el('button','ghost','Clear tag');
+  clr.onclick = () => tagSelection('none');
+  bar.appendChild(clr);
+  const done = el('button','ghost','Done');
+  done.onclick = () => clearSelection();
+  bar.appendChild(done);
+  bar.classList.add('on');
+}
+
+function tagSelection(k){
+  const r = selRange(); if (!r) return;
+  const c = state.courses.find(x => x.id === daySel.courseId); if (!c) return;
+  const [a,b] = r, n = b - a + 1;
+  commit(k === 'none' ? `Tag cleared on ${n} day${n===1?'':'s'}`
+                      : `${n} day${n===1?'':'s'} tagged ${TAGS[k].label}`, () => {
+    for (let i = a; i <= b; i++){
+      const l = state.lessons[c.lessons[i]];
+      if (l) l.tag = k;
+    }
+  });
+  daySel = null;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EXPORT FOR AI
+   ───────────────────────────────────────────────────────────────────
+   planner.json is normalised for the app: lessons live in a flat map,
+   cells are keyed by row id, dates aren't stored at all. That's the
+   right shape for splicing an array and the wrong shape for a language
+   model, which would have to join three structures and still wouldn't
+   know what day anything falls on.
+
+   So this is a second, derived view: flattened, chronological, real
+   names, resolved dates, plain text — and a _readme block up front
+   explaining the sequence-first model, because an assistant that
+   doesn't know about the ripple will give confidently wrong advice
+   about moving a day.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const AI_README = {
+  what: 'A teacher\'s lesson plans, exported from Lesson Planner to be read by an AI assistant.',
+  theKeyIdea:
+    'Lessons are an ORDERED LIST, not a set of dates. Each class has a fixed set of weekdays ' +
+    'it meets; the app lays that class\'s lesson list onto those dates in order. The "date" on ' +
+    'each lesson below is therefore DERIVED, never stored.',
+  whatFollowsFromThat: [
+    'Inserting a lesson pushes every later lesson forward by one meeting.',
+    'Removing one pulls everything after it back by one meeting.',
+    'A holiday shortens the meeting list, so each class shifts by one of ITS OWN meetings — not by one calendar day. Classes meeting different weekdays shift by different amounts of calendar time.',
+    'Dates are not commitments. If you suggest adding a day of practice before a quiz, say plainly that the quiz moves too.',
+  ],
+  whenYouSuggestChanges: [
+    'Refer to a lesson by class name and its "n" number, not by date. Numbers are stable; dates move.',
+    'Spell out the ripple: which lessons shift, and where they land afterwards.',
+    'Respect each class\'s own rows. They differ per class and are listed under "rows" for each class.',
+    'Keep plan text plain. The app stores light HTML but plain text is what reads back cleanly.',
+  ],
+  thisFileIsReadOnly:
+    'Editing this file does not change the planner — it is a snapshot. Describe the changes you ' +
+    'recommend and the teacher will make them in the app.',
+};
+
+/** The whole planner as one flat, readable, chronological structure. */
+function buildAiJson(from, to){
+  const inRange = d => (!from || d >= from) && (!to || d <= to);
+
+  return {
+    _readme: AI_README,
+    exportedOn: iso(new Date()),
+    coveringDates: { from: from || state.yearStart, to: to || state.yearEnd },
+
+    schoolYear: {
+      firstDay: state.yearStart,
+      lastDay: state.yearEnd,
+      terms: (state.terms && state.terms.starts || []).map((s,i) => ({
+        name: `${TERM_MODES[state.terms.mode].abbr || 'Term'}${i+1}`,
+        starts: s,
+      })),
+      holidays: state.holidays
+        .filter(h => inRange(h.date))
+        .map(h => ({ from:h.date, to:h.endDate || h.date, reason:h.reason }))
+        .sort((a,b) => a.from < b.from ? -1 : 1),
+    },
+
+    classes: state.courses.map(c => {
+      const dates = meetingDates(c);
+      const lessons = [];
+      const overflow = [];
+
+      c.lessons.forEach((id, i) => {
+        const l = state.lessons[id];
+        if (!l) return;
+        const date = dates[i] || null;
+
+        const plan = {};
+        c.rows.forEach(r => {
+          const text = htmlToText(l.cells[r.id]);
+          if (text) plan[r.label] = text;
+        });
+
+        const entry = { n: i + 1 };
+        if (date){
+          entry.date = date;
+          entry.weekday = DOW[dow(date)];
+          entry.week = weekLabel(date, c);
+        }
+        entry.concept = l.title || null;
+        if (l.tag && l.tag !== 'none') entry.tag = TAGS[l.tag].label;
+        if (Object.keys(plan).length) entry.plan = plan;
+
+        if (!date) overflow.push(entry);
+        else if (inRange(date)) lessons.push(entry);
+      });
+
+      const out = {
+        name: c.name,
+        meetsOn: c.weekdays.map(w => DOW[w]),
+        runs: { from: c.startDate, to: c.endDate },
+        rows: c.rows.map(r => r.label),
+        lessonCount: c.lessons.length,
+        lessons,
+      };
+      const nc = c.cancelled.filter(x => inRange(x.date));
+      if (nc.length)
+        out.noClassDays = nc.map(x => x.date).sort();
+      if (overflow.length){
+        out.pastEndOfYear = overflow;
+        out.pastEndOfYearNote =
+          'These lessons have been pushed beyond the last day this class meets. They still exist ' +
+          'and are not deleted, but they have no date until the class end date is extended or ' +
+          'days are removed earlier in the sequence.';
+      }
+      return out;
+    }),
+  };
+}
+
+let aiPick = null;
+
+function renderAiPanel(p){
+  if (!aiPick) aiPick = { from: state.yearStart, to: state.yearEnd };
+
+  const g = el('div','grp');
+  g.appendChild(el('div','note',
+    'A flattened, readable copy of your plans — real dates, class and row names, plain text, and ' +
+    'a short briefing that teaches the assistant how the schedule works before it gives you advice.'));
+  p.appendChild(g);
+
+  const rg = el('div','grp');
+  rg.appendChild(el('label','','Dates'));
+  [['from','First day'],['to','Last day']].forEach(([k,lab]) => {
+    const row = el('div','addrow');
+    const l = el('span','note', lab);
+    l.style.minWidth = '64px'; l.style.alignSelf = 'center';
+    const inp = document.createElement('input');
+    inp.type = 'date'; inp.value = aiPick[k];
+    inp.onchange = () => { aiPick[k] = inp.value; openPanel('ai'); };
+    row.appendChild(l); row.appendChild(inp);
+    rg.appendChild(row);
+  });
+  const quick = el('div','dayrow');
+  [['This week', ...currentRange()], ['Whole year', state.yearStart, state.yearEnd]]
+    .forEach(([lab,a,b]) => {
+      const chip = el('div','daychip' + (aiPick.from === a && aiPick.to === b ? ' on' : ''), lab);
+      chip.style.setProperty('--c','var(--accent)');
+      chip.onclick = () => { aiPick.from = a; aiPick.to = b; openPanel('ai'); };
+      quick.appendChild(chip);
+    });
+  rg.appendChild(quick);
+  p.appendChild(rg);
+
+  const text = JSON.stringify(buildAiJson(aiPick.from, aiPick.to), null, 2);
+  const kb = Math.round(text.length / 1024);
+
+  const go = el('div','grp');
+  const copy = el('button','cta','Copy to clipboard');
+  copy.onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(`Copied — ${kb} KB, paste it into a chat`);
+    } catch(e){
+      /* Clipboard permission varies by origin; downloading always works. */
+      download(new Blob([text], { type:'application/json' }), 'lesson-plans-for-ai.json');
+      toast('Clipboard blocked — downloaded instead');
+    }
+  };
+  go.appendChild(copy);
+
+  const dl = el('button','iconbtn','Download as a file');
+  dl.style.marginTop = '8px';
+  dl.onclick = () => {
+    download(new Blob([text], { type:'application/json' }), 'lesson-plans-for-ai.json');
+    toast('Downloaded');
+  };
+  go.appendChild(dl);
+  go.appendChild(el('div','note', `About ${kb} KB. Long ranges get big — a term at a time reads best.`));
+  p.appendChild(go);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FILE STORAGE
+   ───────────────────────────────────────────────────────────────────
+   localStorage is one "clear browsing data" away from losing a year of
+   plans, and it is keyed to where this HTML file sits — move the file
+   and the data silently disappears. So the real home is a folder you
+   pick, ideally inside OneDrive:
+
+       Lesson Planner Data/
+         planner.json
+         backups/planner-2026-09-08.json
+
+   A folder rather than a single file, because a lone file handle can't
+   write siblings and backups would be impossible.
+
+   localStorage is still written on every change as a mirror, so nothing
+   is lost if the folder goes away. Where the API is missing (Safari,
+   Firefox) that mirror is the only copy and the panel says so.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const CAN_FS = typeof window.showDirectoryPicker === 'function';
+const PLANNER_FILE = 'planner.json';
+const READABLE_FILE = 'plans-readable.json';
+const REV_KEY = 'lessonPlanner.revision';
+const BACKUP_KEY = 'lessonPlanner.lastBackup';
+const EXPORT_KEY = 'lessonPlanner.lastExport';
+
+/** A stable-enough name for this computer, so a conflict can say who wrote what. */
+const MACHINE = (() => {
+  let m = localStorage.getItem('lessonPlanner.machine');
+  if (!m){
+    const os = /Mac/i.test(navigator.platform) ? 'Mac'
+             : /Win/i.test(navigator.platform) ? 'PC' : 'Device';
+    m = `${os}-${Math.random().toString(36).slice(2,6)}`;
+    localStorage.setItem('lessonPlanner.machine', m);
+  }
+  return m;
+})();
+
+/* Directory handles are structured-cloneable, so IndexedDB can hold one
+   across restarts. localStorage can't — it's strings only. */
+const IDB = { name:'lessonPlanner', store:'handles' };
+const idbOpen = () => new Promise((res,rej) => {
+  const r = indexedDB.open(IDB.name, 1);
+  r.onupgradeneeded = () => r.result.createObjectStore(IDB.store);
+  r.onsuccess = () => res(r.result);
+  r.onerror = () => rej(r.error);
+});
+const idbGet = k => idbOpen().then(db => new Promise((res,rej) => {
+  const q = db.transaction(IDB.store,'readonly').objectStore(IDB.store).get(k);
+  q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+}));
+const idbSet = (k,v) => idbOpen().then(db => new Promise((res,rej) => {
+  const q = db.transaction(IDB.store,'readwrite').objectStore(IDB.store).put(v,k);
+  q.onsuccess = () => res(); q.onerror = () => rej(q.error);
+}));
+
+let dirHandle = null;       // the connected folder
+let pendingHandle = null;   // remembered, but needs a click to re-grant permission
+let storageState = 'none';  // none | saved | saving | error | reconnect | denied
+let saveTimer = null, savingNow = false, saveAgain = false;
+
+function setStorage(s){ storageState = s; paintStorageBadge(); }
+
+async function writeInto(dir, name, text){
+  const fh = await dir.getFileHandle(name, { create:true });
+  const w = await fh.createWritable();   // stages to a swap file…
+  await w.write(text);
+  await w.close();                       // …and swaps atomically here
+}
+
+async function flushToFolder(){
+  if (!dirHandle) return;
+  if (savingNow){ saveAgain = true; return; }
+  savingNow = true; setStorage('saving');
+  try {
+    state.revision = (state.revision || 0) + 1;
+    state.lastWrittenBy = MACHINE;
+    state.lastWrittenAt = new Date().toISOString();
+    const text = JSON.stringify(state, null, 2);
+    await writeInto(dirHandle, PLANNER_FILE, text);
+    localStorage.setItem(REV_KEY, String(state.revision));
+    /* A readable companion, kept current so it's always there to hand to an
+       assistant without exporting anything first. Never read back — planner.json
+       stays the single source of truth. */
+    try { await writeInto(dirHandle, READABLE_FILE, JSON.stringify(buildAiJson(), null, 2)); }
+    catch(e){ console.warn('readable copy failed', e); }
+    await rollBackup(text);
+    setStorage('saved');
+  } catch(e){
+    console.warn('folder save failed', e);
+    setStorage('error');
+    toast('Could not save to your folder');
+  } finally {
+    savingNow = false;
+    if (saveAgain){ saveAgain = false; scheduleFolderSave(); }
+  }
+}
+
+function scheduleFolderSave(){
+  if (!dirHandle) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushToFolder, 900);
+}
+
+/** One snapshot per day, most recent 30 kept. */
+async function rollBackup(text){
+  const today = iso(new Date());
+  if (localStorage.getItem(BACKUP_KEY) === today) return;
+  const dir = await dirHandle.getDirectoryHandle('backups', { create:true });
+  await writeInto(dir, `planner-${today}.json`, text);
+  localStorage.setItem(BACKUP_KEY, today);
+  const names = [];
+  for await (const [name] of dir.entries())
+    if (/^planner-\d{4}-\d\d-\d\d\.json$/.test(name)) names.push(name);
+  names.sort();
+  for (const n of names.slice(0, Math.max(0, names.length - 30)))
+    await dir.removeEntry(n).catch(() => {});
+}
+
+function adoptLoaded(data){
+  state = migrate(data);
+  localStorage.setItem(REV_KEY, String(state.revision || 0));
+  ui.courseId = state.courses[0] ? state.courses[0].id : ALL;
+  ui.anchor = clampToYear(iso(new Date()));
+  undoStack = []; redoStack = [];
+  invalidateSchedule(); save(); render();
+}
+
+/** Read planner.json from the connected folder, or seed it if absent. */
+async function loadFromFolder(){
+  let data = null;
+  try {
+    const fh = await dirHandle.getFileHandle(PLANNER_FILE);
+    data = JSON.parse(await (await fh.getFile()).text());
+  } catch(e){ data = null; }
+
+  if (!data || !data.courses){
+    await flushToFolder();                 // empty folder — this becomes its home
+    return;
+  }
+
+  /* If the file is behind what this machine last wrote, OneDrive probably
+     hasn't finished syncing. Never merge — that's how a year of work gets
+     quietly mangled. Ask, and let a human decide. */
+  const known = Number(localStorage.getItem(REV_KEY) || 0);
+  if (known && (data.revision || 0) < known){
+    const useFile = confirm(
+      'The planner file in your folder looks older than this computer\'s last save.\n\n' +
+      `File: revision ${data.revision || 0} (saved by ${data.lastWrittenBy || 'unknown'})\n` +
+      `This computer last saved: revision ${known}\n\n` +
+      'This usually means OneDrive is still syncing. Wait a moment and reopen if unsure.\n\n' +
+      'OK — open the file anyway.\nCancel — keep this computer\'s copy and overwrite the file.');
+    if (!useFile){ await flushToFolder(); return; }
+  }
+  adoptLoaded(data);
+  setStorage('saved');
+}
+
+async function chooseFolder(){
+  if (!CAN_FS) return toast('This browser can’t save to a folder');
+  let h;
+  try {
+    h = await window.showDirectoryPicker({ id:'lessonPlannerData', mode:'readwrite' });
+  } catch(e){
+    if (e && e.name === 'AbortError') return;             // user closed the dialog
+    console.warn('directory picker failed', e);
+    setStorage('denied');
+    openPanel('classes');
+    return toast('This page isn’t allowed to open a folder');
+  }
+  try {
+    dirHandle = h;
+    await idbSet('dir', h);
+    const existing = await dirHandle.getFileHandle(PLANNER_FILE).then(() => true, () => false);
+    if (existing && state.courses.length){
+      const useFile = confirm(
+        'That folder already has a planner file.\n\n' +
+        'OK — open it and replace what\'s on screen.\n' +
+        'Cancel — keep what\'s on screen and overwrite the file.');
+      if (!useFile){ await flushToFolder(); }
+      else { await loadFromFolder(); }
+    } else if (existing){
+      await loadFromFolder();
+    } else {
+      await flushToFolder();
+    }
+    toast('Saving to your folder');
+  } catch(e){
+    console.warn(e); dirHandle = null; setStorage('error');
+    toast('Could not use that folder');
+  }
+  openPanel('classes');
+}
+
+async function forgetFolder(){
+  dirHandle = null; pendingHandle = null;
+  await idbSet('dir', null).catch(() => {});
+  localStorage.removeItem(REV_KEY);
+  setStorage('none');
+  openPanel('classes');
+  toast('Folder disconnected — saving in this browser only');
+}
+
+/** Re-grant permission on a handle we remembered. Needs a user gesture. */
+async function reconnectFolder(){
+  if (!pendingHandle) return;
+  try {
+    const p = await pendingHandle.requestPermission({ mode:'readwrite' });
+    if (p !== 'granted') return toast('Permission declined');
+    dirHandle = pendingHandle; pendingHandle = null;
+    await loadFromFolder();
+    openPanel('classes');
+  } catch(e){ console.warn(e); toast('Could not reconnect'); }
+}
+
+/** On boot: reattach silently if permission survived, else offer a button. */
+async function restoreFolder(){
+  if (!CAN_FS) return;
+  let h = null;
+  try { h = await idbGet('dir'); } catch(e){ return; }
+  if (!h) return;
+  try {
+    const p = await h.queryPermission({ mode:'readwrite' });
+    if (p === 'granted'){ dirHandle = h; await loadFromFolder(); }
+    else { pendingHandle = h; setStorage('reconnect'); }
+  } catch(e){ pendingHandle = h; setStorage('reconnect'); }
+}
+
+/* ── the badge in the sub bar ─────────────────────────────────────── */
+
+const daysSince = ts => ts ? Math.floor((Date.now() - Number(ts)) / 86400000) : Infinity;
+
+function paintStorageBadge(){
+  const box = $('storage'); if (!box) return;
+  box.innerHTML = '';
+  if (storageState === 'reconnect'){
+    const b = el('button','warnpill','Reconnect folder');
+    b.title = 'Your saved folder needs permission again';
+    b.onclick = reconnectFolder;
+    return box.appendChild(b);
+  }
+  if (storageState === 'error'){
+    const b = el('button','warnpill','Not saving to folder');
+    b.onclick = () => openPanel('classes');
+    return box.appendChild(b);
+  }
+  if (dirHandle) return;                       // connected and fine — say nothing
+
+  const stale = daysSince(localStorage.getItem(EXPORT_KEY));
+  if (stale >= 7 && state.courses.length){
+    const b = el('button','warnpill',
+      stale === Infinity ? 'Back up your plans' : `Last backup ${stale} days ago`);
+    b.title = 'This browser is the only copy of your plans';
+    b.onclick = () => openPanel('classes');
+    box.appendChild(b);
+  }
+}
+
+function renderStoragePanel(p){
+  const g = el('div','grp');
+  g.appendChild(el('label','','Where your plans live'));
+
+  if (dirHandle){
+    const row = el('div','holitem');
+    row.appendChild(el('span','r', dirHandle.name + '/' + PLANNER_FILE));
+    g.appendChild(row);
+    g.appendChild(el('div','note',
+      'Saved automatically, with a dated copy in backups/ once a day. Put this folder in OneDrive and both computers stay in step.'));
+    const btns = el('div','addrow');
+    const ch = el('button','','Change folder'); ch.onclick = chooseFolder;
+    const fg = el('button','','Disconnect');    fg.onclick = forgetFolder;
+    btns.appendChild(ch); btns.appendChild(fg);
+    g.appendChild(btns);
+  } else if (!CAN_FS){
+    g.appendChild(el('div','note',
+      'This browser can only save inside itself — clearing browsing data would erase your plans. Chrome or Edge can save to a real folder instead. Until then, use Export often.'));
+  } else {
+    g.appendChild(el('div','note',
+      'Right now everything is stored inside this browser. Clearing browsing data, or moving this file, loses it. Pick a folder — ideally in OneDrive — and it saves there automatically and syncs between computers.'));
+    const b = el('button','cta', pendingHandle ? 'Reconnect folder' : 'Choose a folder…');
+    b.style.justifyContent = 'center';
+    b.onclick = pendingHandle ? reconnectFolder : chooseFolder;
+    g.appendChild(b);
+    if (storageState === 'denied')
+      g.appendChild(el('div','note',
+        'That didn’t work from a file opened directly off disk. Your browser may block folder access here — Export stays the reliable backup.'));
+    const stale = daysSince(localStorage.getItem(EXPORT_KEY));
+    if (stale >= 7 && state.courses.length)
+      g.appendChild(el('div','note',
+        stale === Infinity ? 'You haven’t exported a backup yet.'
+                           : `Your last export was ${stale} days ago.`));
+  }
+  p.appendChild(g);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   NAVIGATION + WIRING
+   ═══════════════════════════════════════════════════════════════════ */
+
+function step(dir){
+  if (ui.view === 'day'){
+    let d = ui.anchor;
+    for (let i = 0; i < 400; i++){
+      d = addDays(d, dir);
+      if (d < state.yearStart || d > state.yearEnd) break;
+      if (isWeekday(d)){ ui.anchor = d; break; }
+    }
+  } else if (ui.view === 'month'){
+    const d = parse(ui.anchor);
+    ui.anchor = iso(new Date(d.getFullYear(), d.getMonth() + dir, 1));
+  } else {
+    ui.anchor = addDays(weekStart(ui.anchor), dir * 7);
+  }
+  render();
+}
+
+$('prev').onclick = () => step(-1);
+$('next').onclick = () => step(1);
+$('today').onclick = () => { ui.anchor = todayAnchor(); render(); };
+$('btnMore').onclick = openMoreMenu;
+$('scrim').onclick = () => { closeSearch(); closePanel(); };
+$('filepick').onchange = e => { if (e.target.files[0]) importJson(e.target.files[0]); };
+
+/** Same row, next or previous day — the one move Tab can't make, since Tab
+    walks down a day column and then into the next one. */
+function moveCellFocus(dir){
+  const cur = document.activeElement;
+  if (!cur || !cur.classList || !cur.classList.contains('cell')) return false;
+  const col = cur.closest('.daycol');
+  if (!col) return false;
+  const cols = [...document.querySelectorAll('.daycol[data-idx]')];
+  const next = cols[cols.indexOf(col) + dir];
+  if (!next) return false;
+  const target = next.querySelector(`.cell[data-row="${cur.dataset.row}"]`)
+              || next.querySelector('.cell');
+  if (!target) return false;
+  target.focus();
+  const sel = getSelection();                 // caret to the end, not the start
+  sel.removeAllRanges();
+  const r = document.createRange();
+  r.selectNodeContents(target); r.collapse(false);
+  sel.addRange(r);
+  return true;
+}
+
+const inEditor = () => {
+  const a = document.activeElement;
+  return !!a && (a.isContentEditable || a.tagName === 'INPUT' || a.tagName === 'TEXTAREA');
+};
+
+document.addEventListener('keydown', e => {
+  const mod = e.metaKey || e.ctrlKey;
+
+  /* Search — ⌘K anywhere, or "/" when you're not typing into something. */
+  if ((mod && e.key.toLowerCase() === 'k') || (!mod && !inEditor() && e.key === '/')){
+    e.preventDefault();
+    return searchIsOpen() ? closeSearch() : openSearch();
+  }
+  if (searchIsOpen()){
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      e.preventDefault();
+      if (!searchHits.length) return;
+      searchAt = (searchAt + (e.key === 'ArrowDown' ? 1 : -1) + searchHits.length) % searchHits.length;
+      return renderHits();
+    }
+    if (e.key === 'Enter'){
+      e.preventDefault();
+      if (searchHits[searchAt]) gotoHit(searchHits[searchAt]);
+      return;
+    }
+    if (e.key === 'Escape'){ e.preventDefault(); return closeSearch(); }
+  }
+
+  if (mod && e.key.toLowerCase() === 'z'){
+    if (document.activeElement && document.activeElement.isContentEditable) return;
+    e.preventDefault();
+    e.shiftKey ? redo() : undo();
+  }
+
+  /* Alt + ← / → hops sideways between days without leaving the keyboard. */
+  if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')){
+    if (moveCellFocus(e.key === 'ArrowRight' ? 1 : -1)) e.preventDefault();
+    return;
+  }
+
+  if (e.key === 'Escape'){
+    if (drag) return cancelDrag();
+    if (inEditor()) return document.activeElement.blur();
+    if (clearSelection()) return;
+    closeMenu(); closePanel();
+  }
+
+  if (!mod && !e.altKey && document.activeElement === document.body){
+    if (e.key === 'ArrowLeft')  step(-1);
+    if (e.key === 'ArrowRight') step(1);
+  }
+});
+
+$('searchInput').addEventListener('input', () => {
+  searchHits = runSearch($('searchInput').value);
+  searchAt = 0;
+  renderHits();
+});
+
+render();
+restoreFolder();
+
+/* ── Installable app, but only when hosted ────────────────────────────
+   The manifest, icons and service worker live beside this file on the web
+   copy. Opened straight off disk none of them exist, so they're attached at
+   runtime rather than in <head> — that keeps the emailable single file free
+   of references that would 404. */
+if (location.protocol === 'https:' || location.protocol === 'http:'){
+  const link = (rel, href) => {
+    const l = document.createElement('link');
+    l.rel = rel; l.href = href;
+    document.head.appendChild(l);
+  };
+  link('manifest', 'manifest.json');
+  link('apple-touch-icon', 'apple-touch-icon.png');
+  if (navigator.serviceWorker)
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('sw', err));
+}
+</script>
+</body>
+</html>

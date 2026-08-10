@@ -1,0 +1,9 @@
+.DS_Store
+
+# Your actual lesson plans. The app writes these into whichever folder you
+# pick — keep them out of the repo even if that folder ends up nearby.
+planner.json
+plans-readable.json
+backups/
+lesson-planner-*.json
+*.xlsx
