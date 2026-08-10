@@ -7,7 +7,7 @@ one person, and should be read as rough.
 
 ---
 
-## Shipped — `sandbox/index.html`
+## Shipped — `index.html`
 
 One self-contained file, no build step, no toolchain. Double-click it.
 
@@ -53,6 +53,18 @@ Tab walks down a day then on to the next; ⌥← / ⌥→ move sideways to the s
 run and tag them all at once. Right-click a day → *Copy this day to* another class, matching rows
 by name and naming anything the target has no row for.
 
+### Shipping as a real tool
+Sample/filler data removed — it opens empty and walks you through adding your first class.
+Installable: manifest, icons and an offline service worker, attached only when hosted so the
+single emailable file stays free of broken references. Repo laid out for GitHub Pages.
+
+### Getting plans to an AI
+**⋯ → Export for AI** produces a flattened JSON — real dates, class and row names, plain text,
+chronological — headed by a `_readme` block that explains the sequence-first model before the
+assistant reads a single lesson. Without it an assistant will happily suggest "add a practice
+day" without realising the quiz moves. When a folder is connected, `plans-readable.json` is kept
+current beside `planner.json` so it's always there without exporting anything.
+
 ### Not built, on purpose
 Ripple **preview** (undo covers it and it hasn't been missed) · row-range operations · pinned
 lessons · year rollover · print CSS.
@@ -63,8 +75,8 @@ lessons · year rollover · print CSS.
 
 Small, and worth doing before September rather than during it.
 
-- [ ] **Confirm folder storage works from `file://`.** Settings → *Choose a folder…*. If the
-      browser blocks it, the fallback is to serve the folder over `localhost`, or lean on Export.
+- [ ] **Push to GitHub and turn on Pages**, then install from Chrome's address bar. Hosting also
+      settles the folder-access question — it's reliable on https, uncertain on `file://`.
 - [ ] **Open an exported .xlsx in Excel** and check it looks right to hand to someone.
 - [ ] **Set the real school year, terms and holidays**, then the four classes and their days.
 - [ ] Confirm the OneDrive round-trip: edit on the Mac, wait for sync, open on the PC.

@@ -1,7 +1,7 @@
 # Lesson Planner — Planning Document
 
-**Status:** built and working — `sandbox/index.html`. See [ROADMAP.md](ROADMAP.md) for what shipped.
-**Last updated:** 2026-07-25
+**Status:** built and working — `index.html`, hosted from this repo. See [ROADMAP.md](ROADMAP.md) for what shipped.
+**Last updated:** 2026-08-10
 
 ---
 
@@ -340,6 +340,28 @@ One caveat still to confirm in real use: this page is opened straight off disk (
 browser may refuse folder access from that origin. The code handles the refusal and explains it,
 falling back to Export. If it turns out to be blocked, the fix is to serve the folder over
 `localhost` instead.
+
+## 8b. The AI-readable copy
+
+`planner.json` is normalised for the app: lessons in a flat map, cells keyed by row id, no dates
+stored anywhere. That's the right shape for splicing an array and the wrong shape for a language
+model, which would have to join three structures and still wouldn't know what day anything is on.
+
+So there's a second, derived view — flattened, chronological, real class and row names, resolved
+dates, plain text. It is written to `plans-readable.json` alongside every save, and available on
+demand from **⋯ → Export for AI**.
+
+It opens with a `_readme` block, which is the important part. An assistant that doesn't know
+lessons are an ordered list will confidently tell you to add a day before the quiz without
+mentioning that the quiz moves. The block states the model, spells out the consequences, and asks
+for suggestions to be phrased against stable lesson *numbers* rather than dates.
+
+The copy is deliberately **read-only**. Nothing imports it back. Name-matching a rewritten export
+onto lesson ids is exactly the kind of silent, plausible-looking corruption §5 exists to prevent;
+if round-tripping is ever wanted it should be an explicit, reviewable patch format, not a
+re-import.
+
+---
 
 ## 9. Answered
 
