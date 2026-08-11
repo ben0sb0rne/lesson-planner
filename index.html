@@ -183,6 +183,22 @@ body.dragging *{cursor:grabbing!important}
 }
 .tagpill.none{background:transparent; color:var(--faint); border:1px dashed var(--border-strong)}
 
+/* Status sits beside the tag but reads differently on purpose — outlined, not
+   filled — so "what this lesson is" and "whether it's ready" don't compete. */
+.statuspill{
+  display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700;
+  letter-spacing:.04em; text-transform:uppercase; padding:2px 8px 2px 6px;
+  border-radius:20px; border:1px solid var(--border-strong); color:var(--faint);
+}
+.statuspill i{width:7px; height:7px; border-radius:50%; background:var(--s); display:block; flex:0 0 auto}
+.statuspill.set{border-color:color-mix(in srgb,var(--s) 50%,transparent); color:var(--s)}
+.statuspill.unset i{background:transparent; border:1.5px solid var(--border-strong)}
+.statuspill:hover{border-color:var(--border-strong); color:var(--text)}
+.statuspill.set:hover{color:var(--s)}
+.sdot{width:7px; height:7px; border-radius:50%; background:var(--s); flex:0 0 auto}
+.mcell .srow{display:flex; align-items:center; gap:5px; margin-top:auto;
+  font-size:10px; font-weight:650; color:var(--faint); letter-spacing:.03em}
+
 .cell{
   height:var(--rowh); background:var(--surface); border:1px solid var(--border);
   border-radius:8px; padding:7px 9px; overflow:auto; outline:none; font-size:13px;
@@ -191,6 +207,29 @@ body.dragging *{cursor:grabbing!important}
 .cell:focus{border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
 .cell ul,.cell ol{margin:2px 0; padding-left:19px}
 .cell p{margin:0 0 3px}
+
+/* ── Checklists ─────────────────────────────────────────────────────
+   A <ul class="cl"> of <li data-c="0|1">. Using a real list means Enter,
+   Backspace and indentation keep working for free, and the ticked state is
+   an attribute — so it survives being stored as HTML and read back, which a
+   live <input type="checkbox"> would not. The box is drawn with ::before,
+   and clicking it is caught on the cell. */
+.cell ul.cl,.dayview ul.cl{list-style:none; padding-left:2px; margin:2px 0}
+ul.cl li{position:relative; padding-left:21px; cursor:text}
+ul.cl li::before{
+  content:''; position:absolute; left:1px; top:.28em; width:13px; height:13px;
+  border:1.5px solid var(--border-strong); border-radius:3.5px;
+  background:var(--surface); cursor:pointer; box-sizing:border-box;
+}
+ul.cl li:hover::before{border-color:var(--accent)}
+ul.cl li[data-c="1"]::before{background:var(--accent); border-color:var(--accent)}
+ul.cl li[data-c="1"]::after{
+  content:''; position:absolute; left:5.1px; top:.44em; width:4px; height:7.5px;
+  border:solid #fff; border-width:0 2px 2px 0; transform:rotate(43deg);
+  pointer-events:none;
+}
+ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
+  text-decoration-color:var(--border-strong)}
 
 .offcol{
   display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -248,11 +287,15 @@ body.dragging *{cursor:grabbing!important}
 .dayview .card.cls{border-left:3px solid var(--c)}
 
 /* ─────────────────────────── Month view ─────────────────────────── */
-.month{display:grid; grid-template-columns:repeat(5,1fr); gap:7px; min-width:640px}
+/* Columns are set inline — five days normally, seven once weekends are on. */
+.month{display:grid; gap:7px; min-width:640px}
 .month .dow{
   text-align:center; font-size:11px; font-weight:700; color:var(--muted);
   text-transform:uppercase; letter-spacing:.07em; padding-bottom:2px;
 }
+.month .dow.wknd{color:var(--faint)}
+.mcell.wknd{background:var(--surface-2)}
+.mcell.wknd.off{background:transparent}
 .mcell{
   min-height:88px; background:var(--surface); border:1px solid var(--border);
   border-radius:9px; padding:7px 9px; display:flex; flex-direction:column; gap:4px;
@@ -262,7 +305,27 @@ body.dragging *{cursor:grabbing!important}
 .mcell.off{background:transparent; border-style:dashed; cursor:default}
 .mcell.hol{background:var(--surface-2); border-style:dashed; cursor:default}
 .mcell .n{font-size:11.5px; font-weight:650; color:var(--faint)}
-.mcell.today .n{color:var(--accent)}
+
+/* ── Today ──────────────────────────────────────────────────────────
+   Enough to find at a glance while scanning, quiet enough not to read as
+   an alert. Month: the date number becomes a filled chip. Week: a coloured
+   rule across the top of the column with the word alongside the date. */
+.mcell.today{border-color:var(--accent)}
+.mcell.today .n{
+  color:#fff; background:var(--accent); border-radius:20px;
+  padding:1px 7px; margin:-1px -3px; align-self:flex-start;
+}
+.daycol.istoday .dayhead{
+  border-color:var(--accent);
+  box-shadow:inset 0 2px 0 var(--accent);
+}
+.dayhead .now{
+  font-size:9.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--accent); margin-left:auto;
+}
+.ovhead.today{color:var(--accent)}
+.ovhead.today small{color:var(--accent); opacity:.75}
+.ovcol-today{box-shadow:inset 0 2px 0 var(--accent)}
 .mcell .t{font-size:12.5px; font-weight:560; line-height:1.3; overflow:hidden}
 .mcell .bar{height:3px; border-radius:2px; background:var(--t); margin:-1px -3px 1px}
 .mcell .hn{font-size:11.5px; color:var(--muted); font-style:italic}
@@ -406,6 +469,9 @@ body.dragging *{cursor:grabbing!important}
   font-size:12.5px; font-weight:600; color:var(--muted); min-width:44px;
 }
 .daychip.on{background:var(--c); border-color:var(--c); color:#fff}
+/* Saturday and Sunday read as the exception they are until they're picked. */
+.daychip.wknd{border-style:dashed; color:var(--faint)}
+.daychip.wknd.on{border-style:solid; color:#fff}
 
 .clslist{display:flex; flex-direction:column; gap:4px}
 .clsitem{
@@ -586,6 +652,7 @@ kbd{
   <button data-cmd="bold" title="Bold (⌘B)"><b>B</b></button>
   <button data-cmd="italic" title="Italic (⌘I)"><i>I</i></button>
   <button data-cmd="insertUnorderedList" title="Bullet list">•—</button>
+  <button data-cmd="checklist" title="Checklist">☑</button>
   <button data-cmd="insertOrderedList" title="Numbered list">1.</button>
 </div>
 
@@ -620,11 +687,21 @@ const TAGS = {
 /* Tags that count as an assessment for collision detection in the month view. */
 const ASSESSMENT = new Set(['test','quiz']);
 
+/* A tag says what the lesson IS. Status says whether it's ready to teach —
+   a different question, so it gets its own control rather than crowding the
+   tag list. Deliberately short: anything finer becomes a chore to maintain. */
+const STATUS = {
+  ready:   { label:'Ready',       short:'Ready',   color:'#16a34a' },
+  wip:     { label:'In Progress', short:'WIP',     color:'#d97706' },
+  waiting: { label:'Waiting on Materials', short:'Waiting', color:'#dc2626' },
+};
+
 const DOW  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const DOW3 = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MON  = ['January','February','March','April','May','June','July',
               'August','September','October','November','December'];
-const WEEKDAYS = [1,2,3,4,5];
+const WEEKDAYS   = [1,2,3,4,5];          // Mon–Fri, the default teaching week
+const WEEK_ORDER = [1,2,3,4,5,6,0];      // Mon…Sun, the order columns appear in
 const PALETTE = ['#2563eb','#059669','#d97706','#7c3aed','#dc2626','#0d9488','#db2777','#65a30d'];
 const STORAGE_KEY = 'lessonPlannerSandbox.v2';
 
@@ -640,6 +717,16 @@ const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y
 const addDays = (s,n) => { const d = parse(s); d.setDate(d.getDate()+n); return iso(d); };
 const dow = s => parse(s).getDay();
 const isWeekday = s => { const w = dow(s); return w >= 1 && w <= 5; };
+const isWeekend = s => !isWeekday(s);
+
+/* Weekends are hidden until they're wanted. A class set to meet on a Saturday
+   turns them on by itself — otherwise its lessons would exist with nowhere on
+   screen to show them. */
+const weekendsInUse = () =>
+  state.courses.some(c => c.weekdays.some(w => w === 0 || w === 6));
+const showWeekends = () => !!(state && (state.weekends || weekendsInUse()));
+const visibleDows  = () => showWeekends() ? WEEK_ORDER : WEEKDAYS;
+const isVisibleDay = s => visibleDows().includes(dow(s));
 
 function weekStart(s){                   // Monday of the week containing s
   const w = dow(s);
@@ -879,9 +966,11 @@ function holidayOn(date){
 function schoolDays(){
   const key = state.yearStart + '|' + state.yearEnd + '|' + JSON.stringify(state.holidays);
   if (_schoolDays && _schoolKey === key) return _schoolDays;
+  /* Every calendar day, holidays aside. Which of them a class actually meets
+     is decided by that class's own weekday list, so this must not pre-filter
+     weekends — a Saturday class would lose every one of its meetings. */
   const out = [];
   for (let d = state.yearStart; d <= state.yearEnd; d = addDays(d,1)){
-    if (!isWeekday(d)) continue;
     if (holidayOn(d)) continue;
     out.push(d);
   }
@@ -916,14 +1005,14 @@ const overflowCount = course => Math.max(0, course.lessons.length - meetingDates
 function ensureLesson(course, idx){
   while (course.lessons.length <= idx){
     const id = uid();
-    state.lessons[id] = { id, title:'', tag:'none', cells:{} };
+    state.lessons[id] = { id, title:'', tag:'none', status:null, cells:{} };
     course.lessons.push(id);
   }
   return state.lessons[course.lessons[idx]];
 }
 const blankLesson = () => {
   const id = uid();
-  state.lessons[id] = { id, title:'', tag:'none', cells:{} };
+  state.lessons[id] = { id, title:'', tag:'none', status:null, cells:{} };
   return id;
 };
 
@@ -940,13 +1029,13 @@ const removeDay = (c, i) =>
 const clearDay = (c, i) =>
   commit('Day cleared', () => {
     const l = state.lessons[c.lessons[i]];
-    if (l){ l.title = ''; l.tag = 'none'; l.cells = {}; }
+    if (l){ l.title = ''; l.tag = 'none'; l.status = null; l.cells = {}; }
   });
 
 const duplicateDay = (c, i) =>
   commit('Day duplicated', () => {
     const src = state.lessons[c.lessons[i]], id = uid();
-    state.lessons[id] = { id, title:src.title, tag:src.tag, cells:clone(src.cells) };
+    state.lessons[id] = { id, title:src.title, tag:src.tag, status:src.status || null, cells:clone(src.cells) };
     c.lessons.splice(i+1, 0, id);
   });
 
@@ -1079,7 +1168,7 @@ function renderTabs(){
 function todayAnchor(){
   let d = clampToYear(iso(new Date()));
   if (ui.view === 'day')
-    for (let i = 0; i < 7 && !isWeekday(d); i++) d = clampToYear(addDays(d, 1));
+    for (let i = 0; i < 7 && !isVisibleDay(d); i++) d = clampToYear(addDays(d, 1));
   return d;
 }
 
@@ -1130,9 +1219,10 @@ function renderPeriod(){
   }
 }
 
+/* Monday-based, so index i off weekStart lands on WEEK_ORDER[i]. */
 const weekDates = anchor => {
   const s = weekStart(anchor);
-  return [0,1,2,3,4].map(i => addDays(s,i));
+  return visibleDows().map((_,i) => addDays(s,i));
 };
 
 /* ─────────────────────────── WEEK (one class) ─────────────────────────── */
@@ -1160,10 +1250,10 @@ function renderWeek(stage){
   /* Day columns */
   dates.forEach(date => {
     const hol = holidayOn(date);
-    if (hol) return grid.appendChild(offColumn(hol.reason, fmtShort(date)));
+    if (hol) return grid.appendChild(offColumn(hol.reason, fmtShort(date), date));
 
     if (isCancelled(c, date)){
-      const col = offColumn('No Class', fmtShort(date));
+      const col = offColumn('No Class', fmtShort(date), date);
       const b = el('button','','Restore');
       b.onclick = () => restoreMeeting(c, date);
       col.firstChild.appendChild(b);
@@ -1171,7 +1261,7 @@ function renderWeek(stage){
     }
     const idx = idxByDate.get(date);
     if (idx === undefined)
-      return grid.appendChild(offColumn('No Class', fmtShort(date)));
+      return grid.appendChild(offColumn('No Class', fmtShort(date), date));
 
     grid.appendChild(dayColumn(c, date, idx));
   });
@@ -1186,6 +1276,9 @@ function renderWeek(stage){
    ─────────────────────────────────────────────────────────────────────── */
 
 const PASTE_KEEP = new Set(['B','STRONG','I','EM','U','UL','OL','LI','BR','P','DIV']);
+/* Everything else is stripped, but a checklist's shape lives in these two —
+   the class marks the list, the attribute holds the tick. */
+const PASTE_KEEP_ATTR = { UL:['class'], LI:['data-c'] };
 const PASTE_DROP = new Set(['SCRIPT','STYLE','HEAD','TITLE','META','LINK']);
 
 function cleanPaste(html){
@@ -1196,7 +1289,12 @@ function cleanPaste(html){
      and still get visited, so nested junk is stripped too. */
   box.querySelectorAll('*').forEach(n => {
     if (!PASTE_KEEP.has(n.tagName)) return n.replaceWith(...n.childNodes);
-    [...n.attributes].forEach(a => n.removeAttribute(a.name));
+    const keep = PASTE_KEEP_ATTR[n.tagName] || [];
+    [...n.attributes].forEach(a => {
+      if (!keep.includes(a.name)) return n.removeAttribute(a.name);
+      if (a.name === 'class' && a.value !== 'cl') n.removeAttribute('class');
+      if (a.name === 'data-c' && a.value !== '1') n.removeAttribute('data-c');
+    });
   });
   return box.innerHTML;
 }
@@ -1233,8 +1331,8 @@ function makeTitle(lesson){
   return title;
 }
 
-function offColumn(title, sub){
-  const col = el('div','daycol');
+function offColumn(title, sub, date){
+  const col = el('div','daycol' + (date && date === iso(new Date()) ? ' istoday' : ''));
   const box = el('div','offcol');
   box.appendChild(el('b','', title));
   box.appendChild(el('span','', sub));
@@ -1289,7 +1387,7 @@ function rowLabel(c, r, ri){
 
 function dayColumn(c, date, idx){
   const lesson = ensureLesson(c, idx);
-  const col = el('div','daycol');
+  const col = el('div','daycol' + (date === iso(new Date()) ? ' istoday' : ''));
   col.dataset.idx  = String(idx);
   col.dataset.date = date;
 
@@ -1297,6 +1395,7 @@ function dayColumn(c, date, idx){
   const top = el('div','top');
   top.appendChild(el('span','dow', DOW3[dow(date)]));
   top.appendChild(el('span','date', fmtShort(date)));
+  if (date === iso(new Date())) top.appendChild(el('span','now','Today'));
   head.appendChild(top);
 
   head.appendChild(makeTitle(lesson));
@@ -1307,6 +1406,7 @@ function dayColumn(c, date, idx){
   pill.style.setProperty('--t', TAGS[lesson.tag].color);
   pill.onclick = e => { e.stopPropagation(); openTagMenu(e, c, idx, date); };
   tagrow.appendChild(pill);
+  tagrow.appendChild(statusPill(c, idx, lesson, false));
   head.appendChild(tagrow);
 
   const grip = el('button','grip','⋮⋮');
@@ -1599,6 +1699,7 @@ function renderDay(stage){
   pill.style.setProperty('--t', TAGS[lesson.tag].color);
   pill.onclick = e => openTagMenu(e, c, idx, date);
   hd.appendChild(pill);
+  hd.appendChild(statusPill(c, idx, lesson, true));
   card.appendChild(hd);
 
   card.appendChild(makeTitle(lesson));
@@ -1619,29 +1720,32 @@ function monthCells(anchor){
   const d = parse(anchor);
   const first = new Date(d.getFullYear(), d.getMonth(), 1);
   const last  = new Date(d.getFullYear(), d.getMonth()+1, 0);
-  const fw = new Date(first);
-  while (fw.getDay() === 0 || fw.getDay() === 6) fw.setDate(fw.getDate()+1);
-  const lead = fw.getDay() - 1;                      // Mon → 0 … Fri → 4
+  const dows = visibleDows();
   const days = [];
   for (let dd = new Date(first); dd <= last; dd.setDate(dd.getDate()+1)){
     const s = iso(dd);
-    if (isWeekday(s)) days.push(s);
+    if (dows.includes(dow(s))) days.push(s);
   }
-  return { lead, days };
+  /* Blank cells before the 1st, so the columns line up with the headings. */
+  const lead = days.length ? dows.indexOf(dow(days[0])) : 0;
+  return { lead, days, cols: dows.length };
 }
 
 function renderMonth(stage){
   const c = course();
-  const { lead, days } = monthCells(ui.anchor);
+  const { lead, days, cols } = monthCells(ui.anchor);
   const idxByDate = meetingIndexByDate(c);
   const today = iso(new Date());
 
   const grid = el('div','month');
-  ['Mon','Tue','Wed','Thu','Fri'].forEach(n => grid.appendChild(el('div','dow', n)));
+  grid.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+  visibleDows().forEach(w => grid.appendChild(
+    el('div','dow' + (w === 0 || w === 6 ? ' wknd' : ''), DOW3[w])));
   for (let i = 0; i < lead; i++) grid.appendChild(el('div','mcell off'));
 
   days.forEach(date => {
-    const cell = el('div','mcell' + (date === today ? ' today' : ''));
+    const cell = el('div','mcell' + (date === today ? ' today' : '')
+                                  + (isWeekend(date) ? ' wknd' : ''));
     const hol = holidayOn(date);
     if (hol){
       cell.classList.add('hol');
@@ -1664,6 +1768,14 @@ function renderMonth(stage){
     }
     cell.appendChild(el('div','n', String(parse(date).getDate())));
     cell.appendChild(el('div','t', lesson && lesson.title ? lesson.title : ''));
+    if (lesson && lesson.status && STATUS[lesson.status]){
+      const sr = el('div','srow');
+      const dot = el('i','sdot');
+      dot.style.setProperty('--s', STATUS[lesson.status].color);
+      sr.appendChild(dot);
+      sr.appendChild(el('span','', STATUS[lesson.status].short));
+      cell.appendChild(sr);
+    }
     cell.dataset.idx = String(idx);
     cell.onclick = e => {
       /* Month view is where a semester gets blocked out, so range-select
@@ -1708,16 +1820,19 @@ function collisionsOn(date){
 }
 
 function renderAllMonth(stage){
-  const { lead, days } = monthCells(ui.anchor);
+  const { lead, days, cols } = monthCells(ui.anchor);
   const today = iso(new Date());
   stage.appendChild(classLegend());
 
   const grid = el('div','month');
-  ['Mon','Tue','Wed','Thu','Fri'].forEach(n => grid.appendChild(el('div','dow', n)));
+  grid.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+  visibleDows().forEach(w => grid.appendChild(
+    el('div','dow' + (w === 0 || w === 6 ? ' wknd' : ''), DOW3[w])));
   for (let i = 0; i < lead; i++) grid.appendChild(el('div','mcell off multi'));
 
   days.forEach(date => {
-    const cell = el('div','mcell multi' + (date === today ? ' today' : ''));
+    const cell = el('div','mcell multi' + (date === today ? ' today' : '')
+                                        + (isWeekend(date) ? ' wknd' : ''));
     const hol = holidayOn(date);
     if (hol){
       cell.classList.add('hol');
@@ -1792,7 +1907,7 @@ function renderAllWeek(stage){
 
   grid.appendChild(el('div',''));
   dates.forEach(date => {
-    const h = el('div','ovhead');
+    const h = el('div','ovhead' + (date === iso(new Date()) ? ' today' : ''));
     h.appendChild(document.createTextNode(DOW3[dow(date)]));
     const hol = holidayOn(date);
     h.appendChild(el('small','', hol ? hol.reason : fmtShort(date)));
@@ -1810,19 +1925,28 @@ function renderAllWeek(stage){
     dates.forEach(date => {
       const hol = holidayOn(date);
       const idx = idxByDate.get(date);
+      const isToday = date === iso(new Date());
       if (hol || idx === undefined){
-        const cell = el('div','ovcell empty');
+        const cell = el('div','ovcell empty' + (isToday ? ' ovcol-today' : ''));
         cell.appendChild(el('div','t', hol ? '—' : 'No Class'));
         return grid.appendChild(cell);
       }
       const lesson = state.lessons[c.lessons[idx]];
-      const cell = el('div','ovcell');
+      const cell = el('div','ovcell' + (isToday ? ' ovcol-today' : ''));
+      const marks = el('div','');
+      marks.style.cssText = 'display:flex;align-items:center;gap:6px';
       if (lesson && lesson.tag !== 'none'){
         const p = el('span','tagpill', TAGS[lesson.tag].label);
         p.style.setProperty('--t', TAGS[lesson.tag].color);
-        p.style.alignSelf = 'flex-start';
-        cell.appendChild(p);
+        marks.appendChild(p);
       }
+      if (lesson && lesson.status && STATUS[lesson.status]){
+        const dot = el('i','sdot');
+        dot.style.setProperty('--s', STATUS[lesson.status].color);
+        dot.title = STATUS[lesson.status].label;
+        marks.appendChild(dot);
+      }
+      if (marks.childNodes.length) cell.appendChild(marks);
       /* An unplanned meeting is a ruled blank, not the word "Untitled". */
       cell.appendChild(lesson && lesson.title
         ? el('div','t', lesson.title) : el('div','t blank'));
@@ -1963,6 +2087,41 @@ function openDayMenu(e, c, idx, date){
   placeMenu(e);
 }
 
+/** The status control: a dot plus a word, or a hollow dot when unset. */
+function statusPill(c, idx, lesson, useLongLabel){
+  const st = lesson.status && STATUS[lesson.status] ? STATUS[lesson.status] : null;
+  const b = el('button','statuspill ' + (st ? 'set' : 'unset'));
+  b.style.setProperty('--s', st ? st.color : 'transparent');
+  b.appendChild(el('i',''));
+  if (st) b.appendChild(document.createTextNode(useLongLabel ? st.label : st.short));
+  b.title = st ? `Status: ${st.label}` : 'Set a status';
+  b.onclick = e => { e.stopPropagation(); openStatusMenu(e, c, idx); };
+  return b;
+}
+
+function openStatusMenu(e, c, idx){
+  const m = $('menu'); m.innerHTML = '';
+  m.appendChild(el('div','sec','Is this lesson ready?'));
+  const pick = (k, label, color) => {
+    const b = el('button','');
+    const sw = el('span','sw' + (k ? '' : ' none'));
+    sw.style.setProperty('--t', color || 'transparent');
+    sw.style.borderRadius = '50%';
+    b.appendChild(sw);
+    b.appendChild(document.createTextNode(label));
+    b.onclick = () => {
+      closeMenu();
+      commit(k ? `Marked ${STATUS[k].label}` : 'Status cleared',
+             () => { ensureLesson(c, idx).status = k; });
+    };
+    m.appendChild(b);
+  };
+  Object.entries(STATUS).forEach(([k,s]) => pick(k, s.label, s.color));
+  m.appendChild(document.createElement('hr'));
+  pick(null, 'No status', null);
+  placeMenu(e);
+}
+
 function openTagMenu(e, c, idx, date){
   const m = $('menu'); m.innerHTML = '';
   m.appendChild(el('div','sec','Tag this day'));
@@ -2008,12 +2167,55 @@ function showFmt(cell){
 function hideFmt(){
   fmtHideTimer = setTimeout(() => { $('fmt').classList.remove('on'); fmtTarget = null; }, 140);
 }
+/** The <ul>/<ol> the caret is sitting in, if any. */
+function listAtCaret(root){
+  let n = getSelection().anchorNode;
+  while (n && n !== root){
+    if (n.nodeType === 1 && (n.tagName === 'UL' || n.tagName === 'OL')) return n;
+    n = n.parentNode;
+  }
+  return null;
+}
+
+/* execCommand has no checklist, so one is made out of a normal bulleted list
+   and then marked. Toggling back off just drops the marker, which keeps the
+   text and the list intact. */
+function cmdChecklist(){
+  const list = listAtCaret(fmtTarget);
+  if (list && list.tagName === 'UL'){
+    list.classList.toggle('cl');
+    if (!list.classList.contains('cl'))
+      list.querySelectorAll('li').forEach(li => li.removeAttribute('data-c'));
+    return;
+  }
+  if (list && list.tagName === 'OL') document.execCommand('insertOrderedList');  // unwrap first
+  document.execCommand('insertUnorderedList');
+  const made = listAtCaret(fmtTarget);
+  if (made && made.tagName === 'UL') made.classList.add('cl');
+}
+
 $('fmt').addEventListener('mousedown', e => {
   e.preventDefault();                              // keep focus in the cell
   const cmd = e.target.closest('button')?.dataset.cmd;
   if (!cmd || !fmtTarget) return;
-  document.execCommand(cmd, false, null);
+  if (cmd === 'checklist') cmdChecklist();
+  else document.execCommand(cmd, false, null);
   fmtTarget.dispatchEvent(new Event('input'));
+});
+
+/* Ticking a box. The box is a ::before pseudo-element so it can't be clicked
+   directly — instead catch clicks on the li that land left of the text, and
+   leave everything further right to normal text editing. */
+document.addEventListener('click', e => {
+  const li = e.target.closest && e.target.closest('ul.cl > li');
+  if (!li) return;
+  const box = li.getBoundingClientRect();
+  if (e.clientX > box.left + 21) return;           // clicked the text, not the box
+  const cell = li.closest('.cell');
+  if (!cell) return;
+  e.preventDefault();
+  li.setAttribute('data-c', li.getAttribute('data-c') === '1' ? '0' : '1');
+  cell.dispatchEvent(new Event('input'));
 });
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -2128,8 +2330,9 @@ function renderClassEditor(p, c){
   const dg = el('div','grp');
   dg.appendChild(el('label','','Meets on'));
   const drow = el('div','dayrow');
-  WEEKDAYS.forEach(w => {
-    const chip = el('div','daychip' + (c.weekdays.includes(w) ? ' on' : ''));
+  WEEK_ORDER.forEach(w => {
+    const chip = el('div','daychip' + (c.weekdays.includes(w) ? ' on' : '')
+                                    + (w === 0 || w === 6 ? ' wknd' : ''));
     chip.textContent = DOW3[w];
     chip.style.setProperty('--c', c.color);
     chip.onclick = () => {
@@ -2349,6 +2552,29 @@ function renderCalendarPanel(p){
   });
   p.appendChild(yg);
 
+  const wg = el('div','grp');
+  wg.appendChild(el('label','','Weekends'));
+  const wrow = el('div','dayrow');
+  const forced = weekendsInUse();
+  [[false,'Hide'],[true,'Show']].forEach(([v,lab]) => {
+    const on = showWeekends() === v;
+    const chip = el('div','daychip' + (on ? ' on' : ''), lab);
+    chip.style.setProperty('--c','var(--accent)');
+    if (forced && !v) chip.style.opacity = '.45';
+    chip.onclick = () => {
+      if (forced && !v)
+        return toast('A class meets at the weekend — turn that off first');
+      commit(v ? 'Weekends shown' : 'Weekends hidden', () => { state.weekends = v; });
+      openPanel('classes');
+    };
+    wrow.appendChild(chip);
+  });
+  wg.appendChild(wrow);
+  wg.appendChild(el('div','note', forced
+    ? 'On, because a class is set to meet on a Saturday or Sunday.'
+    : 'Adds Saturday and Sunday columns to the week and month views.'));
+  p.appendChild(wg);
+
   const tg = el('div','grp');
   tg.appendChild(el('label','','Terms'));
   termEditor(tg,
@@ -2485,6 +2711,7 @@ function renderHelp(p){
   ];
   const keys = [
     ['<kbd>⌘</kbd> <kbd>K</kbd>', 'Search every class'],
+    ['<kbd>☑</kbd> in a cell', 'Turns the list into a checklist — click a box to tick it. Good for materials.'],
     ['<kbd>⌘</kbd> <kbd>Z</kbd>', 'Undo — a whole ripple undoes in one press'],
     ['<kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>Z</kbd>', 'Redo'],
     ['<kbd>Tab</kbd>', 'Next box down the day, then on to the next day'],
@@ -2628,10 +2855,14 @@ function htmlToText(html){
       const tag = n.tagName;
       if (tag === 'BR') return out.push('\n');
       if (tag === 'UL' || tag === 'OL'){
+        /* A checklist keeps its ticks in plain text, so a printed or
+           spreadsheet copy still shows what's been gathered. */
+        const check = tag === 'UL' && n.classList.contains('cl');
         let i = 1;
         n.childNodes.forEach(li => {
           if (li.nodeType !== 1 || li.tagName !== 'LI') return;
-          out.push('\n' + (tag === 'OL' ? (i++) + '. ' : '• '));
+          out.push('\n' + (check ? (li.getAttribute('data-c') === '1' ? '[x] ' : '[ ] ')
+                                 : tag === 'OL' ? (i++) + '. ' : '• '));
           walk(li);
         });
         return out.push('\n');
@@ -2717,7 +2948,7 @@ function exportDays(c, from, to, includeOff){
   const idxByDate = meetingIndexByDate(c);
   const out = [];
   for (let d = from; d <= to; d = addDays(d, 1)){
-    if (!isWeekday(d)) continue;
+    if (!isVisibleDay(d)) continue;
     const idx = idxByDate.get(d);
     if (idx !== undefined){ out.push({ date:d, idx }); continue; }
     if (!includeOff) continue;
@@ -2754,6 +2985,14 @@ function sheetXml(c, days){
     days.map((d,i) => d.idx === null
       ? cellXml(ref(i), XF_OFF, d.note)
       : cellXml(ref(i), XF.concept, (lessons[i] && lessons[i].title) || ''))), 20);
+
+  if (lessons.some(l => l && l.status && STATUS[l.status]))
+    push([cellXml(`A${r}`, XF.rowlabel, 'Status')].concat(
+      days.map((d,i) => {
+        if (d.idx === null) return cellXml(ref(i), XF_OFF, '');
+        const st = lessons[i] && lessons[i].status;
+        return cellXml(ref(i), XF.body, st && STATUS[st] ? STATUS[st].label : '');
+      })), 18);
 
   if (tagged)
     push([cellXml(`A${r}`, XF.rowlabel, 'Tag')].concat(
@@ -3036,7 +3275,7 @@ function copyDayTo(from, idx, to, date){
   const note = missing.length ? ` · no row for ${missing.join(', ')}` : '';
   commit(`Copied to ${to.name}${note}`, () => {
     const dst = ensureLesson(to, tIdx);
-    dst.title = src.title; dst.tag = src.tag;
+    dst.title = src.title; dst.tag = src.tag; dst.status = src.status || null;
     dst.cells = Object.assign({}, dst.cells, moved);
   });
 }
@@ -3194,6 +3433,7 @@ function buildAiJson(from, to){
         }
         entry.concept = l.title || null;
         if (l.tag && l.tag !== 'none') entry.tag = TAGS[l.tag].label;
+        if (l.status && STATUS[l.status]) entry.status = STATUS[l.status].label;
         if (Object.keys(plan).length) entry.plan = plan;
 
         if (!date) overflow.push(entry);
@@ -3591,7 +3831,7 @@ function step(dir){
     for (let i = 0; i < 400; i++){
       d = addDays(d, dir);
       if (d < state.yearStart || d > state.yearEnd) break;
-      if (isWeekday(d)){ ui.anchor = d; break; }
+      if (isVisibleDay(d)){ ui.anchor = d; break; }
     }
   } else if (ui.view === 'month'){
     const d = parse(ui.anchor);

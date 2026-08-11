@@ -53,6 +53,24 @@ Tab walks down a day then on to the next; ⌥← / ⌥→ move sideways to the s
 run and tag them all at once. Right-click a day → *Copy this day to* another class, matching rows
 by name and naming anything the target has no row for.
 
+### Marking up a lesson
+**Tags** say what a lesson is (Test, Quiz, Lab…). **Status** says whether it's ready to teach —
+Ready, In Progress, Waiting on Materials — as an outlined chip beside the tag, so the two don't
+compete. Status shows in week, day, month and all-classes views, and in both exports.
+
+**Checklists** alongside bullets and numbers: `☑` in the cell toolbar. Click a box to tick it.
+The state is an attribute on the list item rather than a live `<input>`, so it survives being
+stored as HTML, read back, and pasted; exports render it as `[x]` / `[ ]`.
+
+### The week you're actually in
+Today's column carries a coloured rule and the word TODAY in week view; today's date becomes a
+filled chip in month view; the column is marked in the all-classes week too.
+
+### Weekends
+Classes can meet Saturday and Sunday. Off by default — the day chips show them dashed until
+picked, and Settings has a Hide/Show switch. Setting any class to meet at the weekend turns the
+columns on by itself, since otherwise its lessons would exist with nowhere to appear.
+
 ### Shipping as a real tool
 Sample/filler data removed — it opens empty and walks you through adding your first class.
 Installable: manifest, icons and an offline service worker, attached only when hosted so the
