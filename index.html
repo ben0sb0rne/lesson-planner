@@ -90,6 +90,11 @@ body.dragging *{cursor:grabbing!important}
   background:var(--c); border-radius:2px 2px 0 0;
 }
 .tab.sep{margin-left:10px; padding-left:20px; border-left:1px solid var(--border)}
+.tab .nm[contenteditable="true"]{
+  min-width:2ch; padding:1px 5px; margin:-1px -5px; border-radius:5px;
+  background:var(--bg); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent);
+  cursor:text;
+}
 
 /* ─────────────────────────── Sub bar ─────────────────────────── */
 .subbar{
@@ -1143,8 +1148,11 @@ function renderTabs(){
     const t = el('button', 'tab' + (c.id === ui.courseId ? ' on' : ''));
     t.style.setProperty('--c', c.color);
     t.appendChild(el('span','dot'));
-    t.appendChild(el('span','', c.name));
-    t.onclick = () => { ui.courseId = c.id; render(); };
+    const name = el('span','nm', c.name);
+    name.title = 'Double-click to rename';
+    t.appendChild(name);
+    t.onclick = () => { if (!name.isContentEditable){ ui.courseId = c.id; render(); } };
+    t.ondblclick = e => { e.preventDefault(); renameTab(name, c); };
     box.appendChild(t);
   });
   if (state.courses.length){
@@ -1161,6 +1169,42 @@ function renderTabs(){
     t.onclick = () => { ui.courseId = ALL; render(); };
     box.appendChild(t);
   }
+}
+
+/**
+ * Rename a class in place on its tab. Clicks inside the field have to be
+ * stopped from reaching the tab, because the tab's own handler re-renders
+ * and would destroy the element being typed into.
+ */
+function renameTab(span, c){
+  if (span.isContentEditable) return;
+  const before = c.name;
+  span.contentEditable = 'true';
+  span.spellcheck = false;
+
+  const swallow = e => { if (span.isContentEditable) e.stopPropagation(); };
+  span.onmousedown = swallow;
+  span.onclick = swallow;
+  span.ondblclick = swallow;
+
+  span.focus();
+  const r = document.createRange();
+  r.selectNodeContents(span);
+  const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+
+  const finish = keep => {
+    if (!span.isContentEditable) return;
+    span.contentEditable = 'false';
+    const v = span.textContent.replace(/\s+/g,' ').trim();
+    if (keep && v && v !== before) commit('Class renamed', () => { c.name = v; });
+    else { span.textContent = before; render(); }
+  };
+  span.onblur = () => finish(true);
+  span.onkeydown = e => {
+    e.stopPropagation();                       // ⌘Z in here means undo the typing
+    if (e.key === 'Enter'){ e.preventDefault(); finish(true); }
+    if (e.key === 'Escape'){ e.preventDefault(); span.textContent = before; finish(false); }
+  };
 }
 
 /** The anchor the Today button would set. Clamped into the school year, and
@@ -3807,7 +3851,8 @@ function paintStorageBadge(){
   }
   if (storageState === 'error'){
     const b = el('button','warnpill','Not saving to folder');
-    b.onclick = () => openPanel('classes');
+    b.title = 'Open storage settings';
+    b.onclick = () => openPanel('storage');
     return box.appendChild(b);
   }
   if (dirHandle) return;                       // connected and fine — say nothing
@@ -3816,8 +3861,10 @@ function paintStorageBadge(){
   if (stale >= 7 && state.courses.length){
     const b = el('button','warnpill',
       stale === Infinity ? 'Back up your plans' : `Last backup ${stale} days ago`);
-    b.title = 'This browser is the only copy of your plans';
-    b.onclick = () => openPanel('classes');
+    b.title = 'Download a backup file now';
+    /* Do the thing, don't point at where the thing lives. A warning that
+       sends you hunting through settings is worse than no warning. */
+    b.onclick = exportJson;
     box.appendChild(b);
   }
 }
