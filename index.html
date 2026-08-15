@@ -499,6 +499,7 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
 .holitem{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:5px 0}
 .holitem .d{color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap}
 .holitem .r{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.holitem .meta{color:var(--faint); font-size:11.5px; white-space:nowrap}
 .holitem .x{color:var(--faint);font-size:15px}
 .holitem .x:hover{color:#dc2626}
 .addrow{display:flex;gap:6px}
@@ -2585,11 +2586,29 @@ function renderCalendarPanel(p){
 
   const hg = el('div','grp');
   hg.appendChild(el('label','','Holidays'));
+
+  /* How many teaching days a break actually eats — the number that matters,
+     since a break spanning two weekends costs far fewer days than it looks. */
+  const spanDays = h => dayDiff(h.endDate || h.date, h.date) + 1;
+  const teachingDaysIn = h => {
+    let n = 0;
+    for (let d = h.date; d <= (h.endDate || h.date); d = addDays(d,1))
+      if (visibleDows().includes(dow(d))) n++;
+    return n;
+  };
+
   state.holidays.slice().sort((a,b) => a.date < b.date ? -1 : 1).forEach(h => {
     const item = el('div','holitem');
-    item.appendChild(el('span','d', fmtMed(h.date) + (h.endDate ? '–' + fmtMed(h.endDate) : '')));
+    item.appendChild(el('span','d', fmtMed(h.date) + (h.endDate ? ' – ' + fmtMed(h.endDate) : '')));
     item.appendChild(el('span','r', h.reason));
+    if (h.endDate && h.endDate !== h.date){
+      const n = teachingDaysIn(h);
+      const meta = el('span','meta', `${n} day${n === 1 ? '' : 's'}`);
+      meta.title = `${spanDays(h)} calendar days · ${n} of them teaching days`;
+      item.appendChild(meta);
+    }
     const x = el('button','x','×');
+    x.title = 'Remove';
     x.onclick = () => {
       commit('Holiday removed · all classes shifted back', () => {
         state.holidays = state.holidays.filter(q => q.id !== h.id);
@@ -2599,20 +2618,39 @@ function renderCalendarPanel(p){
     item.appendChild(x);
     hg.appendChild(item);
   });
+
+  /* From / To, because a break is usually a range — entering Christmas one
+     day at a time was the tedious path this replaces. */
+  const drow = el('div','addrow');
+  const hd = document.createElement('input'); hd.type = 'date'; hd.title = 'First day';
+  const he = document.createElement('input'); he.type = 'date'; he.title = 'Last day (optional)';
+  const dash = el('span','note','–');
+  dash.style.alignSelf = 'center';
+  drow.appendChild(hd); drow.appendChild(dash); drow.appendChild(he);
+  hg.appendChild(drow);
+
   const arow = el('div','addrow');
-  const hd = document.createElement('input'); hd.type = 'date';
   const hr = document.createElement('input'); hr.type = 'text'; hr.placeholder = 'Reason';
   const hb = el('button','','Add');
-  hb.onclick = () => {
-    if (!hd.value) return toast('Pick a date');
-    commit('Holiday added · all classes shifted', () => {
-      state.holidays.push({ id:uid(), date:hd.value, reason:hr.value || 'No school' });
-    });
+  const add = () => {
+    if (!hd.value) return toast('Pick a first day');
+    if (he.value && he.value < hd.value) return toast('That range runs backwards');
+    const one = !he.value || he.value === hd.value;
+    const h = { id:uid(), date:hd.value, reason:hr.value.trim() || 'No school' };
+    if (!one) h.endDate = he.value;
+    const n = teachingDaysIn(h);
+    commit(one ? 'Holiday added · all classes shifted'
+               : `${h.reason} added · ${n} day${n===1?'':'s'} off, all classes shifted`,
+           () => { state.holidays.push(h); });
     openPanel('classes');
   };
-  arow.appendChild(hd); arow.appendChild(hr); arow.appendChild(hb);
+  hb.onclick = add;
+  hr.onkeydown = e => { if (e.key === 'Enter') add(); };
+  arow.appendChild(hr); arow.appendChild(hb);
   hg.appendChild(arow);
-  hg.appendChild(el('div','note','Applies to every class at once, and undoes as one action.'));
+  hg.appendChild(el('div','note',
+    'Leave the second date empty for a single day. A break covers everything between the two, ' +
+    'applies to every class at once, and undoes as one action.'));
   p.appendChild(hg);
 
 }
