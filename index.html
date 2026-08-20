@@ -124,11 +124,21 @@ body.dragging *{cursor:grabbing!important}
 .stage{flex:1; overflow:auto; padding:18px}
 
 /* ─────────────────────────── Week grid ─────────────────────────── */
-.weekgrid{display:grid; gap:10px; align-items:start; min-width:min-content}
-.rowlabels{display:flex; flex-direction:column; gap:8px; position:sticky; left:0; z-index:3}
-.rowlabels .rl-spacer{height:var(--headh)}
+/* The week is ONE grid, and every column is a subgrid of it. That's what
+   keeps a row level across all five days while letting it grow: the row's
+   height is decided once, by whichever cell in it has the most in it.
+   Each day still gets its own box — the drag code measures those. */
+.weekgrid{
+  display:grid; column-gap:10px; row-gap:8px;
+  align-items:stretch; min-width:min-content;
+}
+.rowlabels{
+  display:grid; grid-template-rows:subgrid; grid-row:1/-1;
+  position:sticky; left:0; z-index:3;
+}
+.rowlabels .rl-spacer{min-height:var(--headh)}
 .rowlabel{
-  display:flex; align-items:center; gap:6px; padding:8px 9px; height:var(--rowh);
+  display:flex; align-items:flex-start; gap:6px; padding:8px 9px; min-height:var(--rowh);
   background:var(--surface); border:1px solid var(--border); border-radius:8px;
   font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase;
   letter-spacing:.05em; cursor:grab; user-select:none;
@@ -137,17 +147,23 @@ body.dragging *{cursor:grabbing!important}
 .rowlabel.dragging{opacity:.4}
 .rowlabel.over{border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent)}
 .rowlabel .grip{color:var(--faint); font-size:13px; letter-spacing:-2px}
-.rowlabel .txt{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+/* A row name wraps onto as many lines as it needs. "Differentiati…" told
+   you nothing; the grid can afford the height now that rows stretch. */
+.rowlabel .txt{flex:1; min-width:0; white-space:normal; overflow-wrap:break-word;
+  line-height:1.3; letter-spacing:.03em}
 .rowlabel .x{opacity:0; color:var(--faint); font-size:15px; padding:0 2px}
 .rowlabel:hover .x{opacity:1}
 .rowlabel .x:hover{color:#dc2626}
 .addrowmini{
-  align-self:flex-start; margin-top:2px; padding:4px 9px; border-radius:6px;
+  justify-self:start; align-self:start; margin-top:2px; padding:4px 9px; border-radius:6px;
   font-size:11.5px; font-weight:600; color:var(--faint); letter-spacing:.03em;
 }
 .addrowmini:hover{background:var(--surface-2); color:var(--text)}
 
-.daycol{position:relative; display:flex; flex-direction:column; gap:8px}
+.daycol{position:relative; display:grid; grid-template-rows:subgrid}
+/* A holiday or No Class column has one box, so it just fills the height. */
+.daycol.offday{display:block}
+.daycol.offday .offcol{height:100%}
 .daycol.drag-src{opacity:.35}
 .daycol.swap-target .dayhead,.daycol.swap-target .cell{
   border-color:var(--accent);
@@ -155,7 +171,7 @@ body.dragging *{cursor:grabbing!important}
 }
 
 .dayhead{
-  height:var(--headh); background:var(--surface); border:1px solid var(--border);
+  min-height:var(--headh); background:var(--surface); border:1px solid var(--border);
   border-radius:var(--radius); padding:8px 10px; display:flex; flex-direction:column;
   gap:5px; position:relative;
 }
@@ -178,9 +194,12 @@ body.dragging *{cursor:grabbing!important}
 .dayhead .more:hover{background:var(--surface-2); color:var(--text)}
 .title{
   width:100%; border:none; background:transparent; padding:1px 0; font-size:13.5px;
-  font-weight:600; letter-spacing:-.01em; outline:none;
+  font-weight:600; letter-spacing:-.01em; outline:none; line-height:1.3;
+  overflow-wrap:break-word;
 }
-.title::placeholder{color:var(--faint); font-weight:500}
+/* An <input> can only ever truncate, so the concept is a contenteditable
+   div with its own placeholder. */
+.title:empty::before{content:attr(data-ph); color:var(--faint); font-weight:500}
 .tagrow{display:flex; align-items:center; gap:5px}
 .tagpill{
   font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
@@ -205,8 +224,9 @@ body.dragging *{cursor:grabbing!important}
   font-size:10px; font-weight:650; color:var(--faint); letter-spacing:.03em}
 
 .cell{
-  height:var(--rowh); background:var(--surface); border:1px solid var(--border);
-  border-radius:8px; padding:7px 9px; overflow:auto; outline:none; font-size:13px;
+  min-height:var(--rowh); background:var(--surface); border:1px solid var(--border);
+  border-radius:8px; padding:7px 9px; outline:none; font-size:13px;
+  overflow-wrap:anywhere;                  /* a pasted URL can't blow the column out */
 }
 .cell:hover{border-color:var(--border-strong)}
 .cell:focus{border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
@@ -1280,7 +1300,11 @@ function renderWeek(stage){
   const grid = el('div','weekgrid');
   grid.style.setProperty('--rowh','66px');
   grid.style.setProperty('--headh','86px');
-  grid.style.gridTemplateColumns = `168px repeat(${dates.length}, minmax(190px,1fr))`;
+  grid.style.gridTemplateColumns = `180px repeat(${dates.length}, minmax(190px,1fr))`;
+  /* header row, one row per component, then a row for the + Row button */
+  const nRows = c.rows.length;
+  grid.style.gridTemplateRows = `auto repeat(${nRows}, auto) auto`;
+  grid.dataset.span = String(nRows + 1);
 
   /* Row labels */
   const labels = el('div','rowlabels');
@@ -1367,17 +1391,22 @@ function makeCell(lesson, rowId, cls){
 
 /** The lesson-concept input, with the same one-entry-per-session undo. */
 function makeTitle(lesson){
-  const title = document.createElement('input');
-  title.className = 'title';
-  title.value = lesson.title || '';
-  title.placeholder = 'Lesson concept…';
-  title.oninput = () => { lesson.title = title.value; save(); };
-  bindEditable(title, () => title.value, v => setTitle(lesson.id, v), 'Concept edited');
+  const title = el('div','title');
+  title.contentEditable = 'true';
+  title.spellcheck = false;
+  title.dataset.ph = 'Lesson concept…';
+  title.textContent = lesson.title || '';
+  title.oninput = () => { lesson.title = title.textContent; save(); };
+  /* One line of meaning, however many lines of screen — Enter leaves rather
+     than starting a paragraph. */
+  title.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); title.blur(); } };
+  bindEditable(title, () => title.textContent, v => setTitle(lesson.id, v), 'Concept edited');
   return title;
 }
 
 function offColumn(title, sub, date){
-  const col = el('div','daycol' + (date && date === iso(new Date()) ? ' istoday' : ''));
+  const col = el('div','daycol offday' + (date && date === iso(new Date()) ? ' istoday' : ''));
+  col.style.gridRow = '1 / -1';
   const box = el('div','offcol');
   box.appendChild(el('b','', title));
   box.appendChild(el('span','', sub));
@@ -1433,6 +1462,8 @@ function rowLabel(c, r, ri){
 function dayColumn(c, date, idx){
   const lesson = ensureLesson(c, idx);
   const col = el('div','daycol' + (date === iso(new Date()) ? ' istoday' : ''));
+  /* header + one row per component; the + Row row belongs to the labels only */
+  col.style.gridRow = `1 / span ${c.rows.length + 1}`;
   col.dataset.idx  = String(idx);
   col.dataset.date = date;
 
@@ -1477,11 +1508,11 @@ function dayColumn(c, date, idx){
      Shift is reserved for range selection, so it must not start a drag. */
   head.addEventListener('pointerdown', e => {
     if (e.shiftKey) return;
-    if (e.target.closest('input, .more, .tagpill')) return;
+    if (e.target.closest('input, .title, .more, .tagpill, .statuspill')) return;
     beginDrag(e, c, col);
   });
   head.addEventListener('click', e => {
-    if (!e.shiftKey || e.target.closest('input, .more, .tagpill')) return;
+    if (!e.shiftKey || e.target.closest('input, .title, .more, .tagpill, .statuspill')) return;
     e.preventDefault();
     extendSelection(c, idx);
   });
