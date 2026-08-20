@@ -14,7 +14,7 @@
 :root{
   --bg:#faf9f7; --surface:#fff; --surface-2:#f4f2ef; --border:#e5e1db;
   --border-strong:#d3cec6; --text:#1f1d1a; --muted:#6b665e; --faint:#9c968c;
-  --accent:#2563eb; --warn:#d97706;
+  --accent:#2563eb; --warn:#d97706; --ok:#059669;
   --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.05);
   --radius:10px;
   --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
@@ -23,7 +23,7 @@
   :root{
     --bg:#1a1917; --surface:#232120; --surface-2:#2b2927; --border:#35322e;
     --border-strong:#454039; --text:#f0ede8; --muted:#9a938a; --faint:#6f6960;
-    --warn:#f59e0b;
+    --warn:#f59e0b; --ok:#34d399;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.35);
   }
 }
@@ -75,7 +75,11 @@ body.dragging *{cursor:grabbing!important}
 .tabs{
   display:flex; align-items:center; gap:2px; padding:0 18px;
   background:var(--surface); border-bottom:1px solid var(--border); flex:0 0 auto;
+  overflow-x:auto; scrollbar-width:none;
 }
+.tabs::-webkit-scrollbar{display:none}
+.tab.dragging{opacity:.4}
+.tab.over{background:color-mix(in srgb,var(--accent) 12%,transparent)}
 .tab{
   position:relative; padding:9px 15px 10px; font-size:13.5px; font-weight:550;
   color:var(--muted); display:flex; align-items:center; gap:7px; white-space:nowrap;
@@ -113,12 +117,39 @@ body.dragging *{cursor:grabbing!important}
   text-transform:uppercase; border:1px solid var(--border); border-radius:20px;
   padding:1px 8px; white-space:nowrap;
 }
-.overflowpill,.warnpill{
+.overflowpill{
   font-size:12px; font-weight:560; color:var(--warn); border:1px solid var(--warn);
   padding:3px 9px; border-radius:20px; background:color-mix(in srgb,var(--warn) 10%,transparent);
 }
-.warnpill{margin-right:8px}
-.warnpill:hover{background:color-mix(in srgb,var(--warn) 20%,transparent)}
+/* One pill for every saving state, so there aren't two competing systems in
+   the same slot. Colour carries the level; the text carries the meaning. */
+.savepill{
+  display:inline-flex; align-items:center; gap:7px; margin-right:8px;
+  padding:3px 10px; border:1px solid var(--border); border-radius:20px;
+  font-size:12px; font-weight:560; color:var(--muted); white-space:nowrap; max-width:250px;
+}
+.savepill:hover{background:var(--surface-2); color:var(--text)}
+.savepill .dot{width:7px; height:7px; border-radius:50%; background:currentColor; flex:0 0 auto}
+.savepill .sub{color:var(--faint); font-weight:500; min-width:0; overflow:hidden; text-overflow:ellipsis}
+.savepill .sub::before{content:'· '}
+.savepill.ok .dot{background:var(--ok)}
+.savepill.busy .dot{background:var(--accent); animation:savepulse 1.1s ease-in-out infinite}
+.savepill.dirty{color:var(--text)}
+.savepill.dirty .dot{background:var(--accent)}
+.savepill.warn{
+  color:var(--warn); border-color:var(--warn);
+  background:color-mix(in srgb,var(--warn) 10%,transparent);
+}
+.savepill.warn:hover{background:color-mix(in srgb,var(--warn) 20%,transparent)}
+@keyframes savepulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){ .savepill.busy .dot{animation:none} }
+
+.banner{
+  display:flex; flex-direction:column; gap:8px; padding:14px;
+  border:1px solid var(--accent); border-radius:11px;
+  background:color-mix(in srgb,var(--accent) 8%,transparent);
+}
+.banner b{font-size:13.5px}
 
 /* ─────────────────────────── Scroll area ─────────────────────────── */
 .stage{flex:1; overflow:auto; padding:18px}
@@ -471,10 +502,33 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
 .scrim.on{display:block}
 .panel{
   position:fixed; top:0; right:0; bottom:0; width:min(460px,94vw); background:var(--surface);
-  border-left:1px solid var(--border); z-index:75; padding:20px; overflow:auto;
-  display:none; flex-direction:column; gap:18px;
+  border-left:1px solid var(--border); z-index:75; padding:20px 20px 0; overflow:hidden;
+  display:none; flex-direction:column; gap:14px;
 }
 .panel.on{display:flex}
+/* The header stays put so Back and Close never scroll away; only the body moves. */
+.panelhd{display:flex; align-items:center; gap:10px; flex:0 0 auto}
+.panebody{
+  flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column;
+  gap:18px; padding-bottom:20px;
+}
+.backbtn{
+  display:flex; align-items:center; gap:5px; margin-left:-6px; padding:4px 8px;
+  border-radius:7px; color:var(--muted); font-size:13px; font-weight:560; white-space:nowrap;
+}
+.backbtn:hover{background:var(--surface-2); color:var(--text)}
+.navlist{display:flex; flex-direction:column; gap:2px}
+.navrow{
+  display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  padding:11px 10px; border-radius:9px; font-size:14px; font-weight:560;
+}
+.navrow:hover{background:var(--surface-2)}
+.navrow .v{
+  margin-left:auto; font-size:12.5px; font-weight:500; color:var(--faint);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:54%;
+}
+.navrow .chev,.backbtn .chev,.clsitem .chev{color:var(--faint); font-size:15px; flex:0 0 auto}
+.clsitem .chev{margin-left:4px}
 .panel h3{margin:0; font-size:16px; letter-spacing:-.01em}
 .panel h4{margin:0; font-size:13px; letter-spacing:-.01em}
 .panel .grp{display:flex; flex-direction:column; gap:8px}
@@ -884,12 +938,35 @@ function migrate(data){
   return data;
 }
 
+const DIRTY_KEY = 'lessonPlanner.dirtySince';
+const SETUP_KEY = 'lessonPlanner.setupAsked';
+/* The moment of the FIRST unsaved change, not the latest — that's what gives
+   the warning its clock. Persisted, because the case that actually matters is
+   a tab reopened days later with work that was never backed up. */
+let dirtySince = Number(localStorage.getItem(DIRTY_KEY)) || 0;
+let lastSavedAt = 0;
+
+function markDirty(){
+  if (dirtySince) return;          /* save() runs per keystroke — this guard is
+                                      what stops a write and a repaint per character */
+  dirtySince = Date.now();
+  localStorage.setItem(DIRTY_KEY, String(dirtySince));
+  paintStorageBadge();
+}
+function markClean(){
+  if (!dirtySince) return;
+  dirtySince = 0;
+  localStorage.removeItem(DIRTY_KEY);
+  paintStorageBadge();
+}
+
 function save(){
   /* localStorage stays a mirror even when a folder is connected — it costs
      nothing and means a folder going missing never loses the day's work. */
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
   catch(e){ console.warn('save failed', e); }
   if (typeof scheduleFolderSave === 'function') scheduleFolderSave();
+  if (typeof markDirty === 'function') markDirty();
 }
 const clone = o => JSON.parse(JSON.stringify(o));
 
@@ -902,6 +979,7 @@ function commit(label, fn){
   invalidateSchedule();
   save();
   render();
+  schedulePaneRepaint();
   if (label) toast(label);
 }
 /**
@@ -941,7 +1019,7 @@ function undo(){
     redoStack.push({ label:'', snap: clone(state) });
     state = e.snap;
   }
-  invalidateSchedule(); save(); render();
+  invalidateSchedule(); save(); render(); schedulePaneRepaint();
   toast('Undid: ' + (e.label || 'last change'));
 }
 function redo(){
@@ -954,7 +1032,7 @@ function redo(){
     undoStack.push({ label:'', snap: clone(state) });
     state = e.snap;
   }
-  invalidateSchedule(); save(); render();
+  invalidateSchedule(); save(); render(); schedulePaneRepaint();
   toast('Redone');
 }
 
@@ -1142,7 +1220,7 @@ function renderFirstRun(stage){
   box.appendChild(el('b','','No classes yet'));
   box.appendChild(el('div','','Add each class you teach — its name, the days it meets, and the rows you plan against.'));
   const cta = el('button','cta','+ Add a class');
-  cta.onclick = () => { openPanel('classes'); setTimeout(addCourse, 60); };
+  cta.onclick = () => { openPanel(['classes']); setTimeout(addCourse, 60); };
   box.appendChild(cta);
   const alt = el('div','alt');
   alt.appendChild(document.createTextNode('Already have a backup file? '));
@@ -1164,15 +1242,41 @@ function renderViews(){
 
 function renderTabs(){
   const box = $('tabs'); box.innerHTML = '';
-  state.courses.forEach(c => {
+  state.courses.forEach((c, ci) => {
     const t = el('button', 'tab' + (c.id === ui.courseId ? ' on' : ''));
     t.style.setProperty('--c', c.color);
     t.appendChild(el('span','dot'));
     const name = el('span','nm', c.name);
-    name.title = 'Double-click to rename';
+    name.title = 'Double-click to rename · drag to reorder';
     t.appendChild(name);
     t.onclick = () => { if (!name.isContentEditable){ ui.courseId = c.id; render(); } };
     t.ondblclick = e => { e.preventDefault(); renameTab(name, c); };
+
+    /* Same shape as the row-label and editor-row reorders. The distinct mime
+       is what keeps the three drop targets from accepting each other. */
+    t.draggable = true;
+    t.ondragstart = e => {
+      /* draggable fights contenteditable — a rename in progress wins. */
+      if (name.isContentEditable) return e.preventDefault();
+      e.dataTransfer.setData('text/tab', String(ci));
+      e.dataTransfer.effectAllowed = 'move';
+      t.classList.add('dragging');
+    };
+    t.ondragend   = () => t.classList.remove('dragging');
+    t.ondragover  = e => {
+      if (!e.dataTransfer.types.includes('text/tab')) return;
+      e.preventDefault(); t.classList.add('over');
+    };
+    t.ondragleave = () => t.classList.remove('over');
+    t.ondrop = e => {
+      e.preventDefault(); t.classList.remove('over');
+      const from = Number(e.dataTransfer.getData('text/tab'));
+      if (from === ci || Number.isNaN(from)) return;
+      commit('Classes reordered', () => {
+        const [m] = state.courses.splice(from, 1);
+        state.courses.splice(ci, 0, m);
+      });
+    };
     box.appendChild(t);
   });
   if (state.courses.length){
@@ -2101,24 +2205,18 @@ function placeMenu(e, anchor){
   m.style.left = Math.max(8, x) + 'px'; m.style.top = Math.max(8, y) + 'px';
 }
 
-/** Everything that used to be an unlabelled icon, with its name on it. */
+/** Short enough to read at a glance. Names only — the sub-labels explained
+    things you learn once and then never read again. */
 function openMoreMenu(e){
   const m = $('menu'); m.innerHTML = '';
-  m.appendChild(el('div','sec','Planner'));
-  menuItem(m, 'Classes & settings', () => openPanel('classes'), '',
-           'Classes, meeting days, rows, terms, holidays');
+  menuItem(m, 'Settings', () => openPanel());
   menuItem(m, 'Help & shortcuts', () => openPanel('help'));
   m.appendChild(document.createElement('hr'));
-  m.appendChild(el('div','sec','Share & back up'));
-  menuItem(m, 'Export to Excel…', () => openPanel('export'), '',
-           'A range of dates, for sharing');
-  menuItem(m, 'Export for AI…', () => openPanel('ai'), '',
-           'Readable JSON you can hand to Claude');
-  menuItem(m, 'Save a backup file', exportJson, '', 'Everything, as JSON');
-  menuItem(m, 'Open a backup file…', () => $('filepick').click());
+  menuItem(m, 'Export to Excel…', () => openPanel('export'));
+  menuItem(m, 'Export for AI…', () => openPanel('ai'));
   m.appendChild(document.createElement('hr'));
-  menuItem(m, 'Where plans are saved…', () => openPanel('storage'), '',
-           dirHandle ? dirHandle.name : 'This browser only — not backed up');
+  menuItem(m, 'Save a backup', exportJson);
+  menuItem(m, 'Open a backup…', () => $('filepick').click());
   placeMenu(e, $('btnMore'));
 }
 const closeMenu = () => $('menu').classList.remove('on');
@@ -2298,36 +2396,221 @@ document.addEventListener('click', e => {
    PANEL: classes, calendar, help
    ═══════════════════════════════════════════════════════════════════ */
 
-let panelTab = 'classes', editingId = null;
+/* Where we are in settings. [] is the root list; each extra segment goes one
+   level deeper. Back is always "drop the last segment", so the trail can
+   never disagree with what's on screen — which a free-form stack could. */
+let panelPath = [];
+const courseById = id => state.courses.find(c => c.id === id) || null;
 
-function openPanel(tab){
-  panelTab = tab || panelTab;
-  const p = $('panel'); p.innerHTML = '';
-  $('scrim').classList.add('on'); p.classList.add('on');
+/* Every pane the panel can show. `root:true` puts it on the settings list in
+   this object's own order, with `summary()` as the value on its right — the
+   root is meant to be readable, not just a set of doors. `standalone:true`
+   means it's a verb reached from the ⋯ menu, so no Back arrow and no row. */
+const PANES = {
+  classes: {
+    title: sub => sub[0] ? ((courseById(sub[0]) || {}).name || 'Class') : 'Classes',
+    root: true,
+    summary: () => `${state.courses.length} class${state.courses.length === 1 ? '' : 'es'}`,
+    render: renderClassesPane,
+  },
+  year: {
+    title: 'School year', root: true,
+    summary: () => `${fmtMed(state.yearStart)} – ${fmtMed(state.yearEnd)}`,
+    render: renderYearPane,
+  },
+  terms: {
+    title: 'Terms', root: true,
+    summary: () => (TERM_MODES[state.terms.mode] || {}).label || '—',
+    render: renderTermsPane,
+  },
+  holidays: {
+    title: 'Holidays', root: true,
+    summary: () => state.holidays.length
+      ? `${state.holidays.length} break${state.holidays.length === 1 ? '' : 's'}` : 'None',
+    render: renderHolidaysPane,
+  },
+  weekends: {
+    title: 'Weekends', root: true,
+    summary: () => showWeekends() ? (weekendsInUse() ? 'On · a class meets' : 'On') : 'Off',
+    render: renderWeekendsPane,
+  },
+  saving: {
+    title: 'Saving', root: true,
+    summary: () => savingSummary(),
+    render: renderStoragePane,
+  },
+  help:   { title:'Help & shortcuts', standalone:true, render: renderHelp },
+  export: { title:'Export to Excel',  standalone:true, render: renderExportPanel },
+  ai:     { title:'Export for AI',    standalone:true, render: renderAiPanel },
+};
 
-  const hd = el('div','');
-  hd.style.display = 'flex'; hd.style.alignItems = 'center'; hd.style.gap = '10px';
-  hd.appendChild(el('h3','',
-    panelTab === 'help'    ? 'Help & shortcuts'     :
-    panelTab === 'export'  ? 'Export to Excel'      :
-    panelTab === 'ai'      ? 'Export for AI'        :
-    panelTab === 'storage' ? 'Where plans are saved' : 'Classes & settings'));
+const panelIsOpen = () => $('panel').classList.contains('on');
+
+function openPanel(path){
+  panelPath = path == null ? [] : Array.isArray(path) ? path.slice() : [path];
+  $('scrim').classList.add('on');
+  $('panel').classList.add('on');
+  paintPanel();
+}
+function panelGoto(...seg){ panelPath = seg; paintPanel(); }
+function panelBack(){ panelPath.pop(); paintPanel(); }
+
+function paneTitle(){
+  if (!panelPath.length) return 'Settings';
+  const pane = PANES[panelPath[0]];
+  if (!pane) return 'Settings';
+  return typeof pane.title === 'function' ? pane.title(panelPath.slice(1)) : pane.title;
+}
+
+function panelHeader(){
+  const hd = el('div','panelhd');
+  const pane = PANES[panelPath[0]];
+  const standalone = pane && pane.standalone && panelPath.length === 1;
+  if (panelPath.length && !standalone){
+    const b = el('button','backbtn');
+    b.appendChild(el('span','chev','‹'));
+    /* Going back drops the last segment, so the label is this pane's title
+       evaluated one level shallower — not the raw title, which may be a fn. */
+    const parent = panelPath.length > 1
+      ? (typeof pane.title === 'function' ? pane.title(panelPath.slice(1, -1)) : pane.title)
+      : 'Settings';
+    b.appendChild(el('span','', parent));
+    b.onclick = panelBack;
+    hd.appendChild(b);
+  }
+  hd.appendChild(el('h3','', paneTitle()));
   const close = el('button','iconbtn','Close');
   close.style.marginLeft = 'auto';
   close.onclick = closePanel;
   hd.appendChild(close);
-  p.appendChild(hd);
-
-  if (panelTab === 'help')    return renderHelp(p);
-  if (panelTab === 'export')  return renderExportPanel(p);
-  if (panelTab === 'ai')      return renderAiPanel(p);
-  if (panelTab === 'storage') return renderStoragePanel(p);
-  renderClassesPanel(p);
-  p.appendChild(document.createElement('hr'));
-  renderCalendarPanel(p);
-  p.appendChild(document.createElement('hr'));
-  renderStoragePanel(p);
+  return hd;
 }
+
+/** Header and body. For when the destination changes. */
+function paintPanel(){
+  const p = $('panel'); p.innerHTML = '';
+  p.appendChild(panelHeader());
+  const body = el('div','panebody');
+  p.appendChild(body);
+  paintPaneBody(body);
+}
+
+/** Body only, so the header, the scroll position and the focused control all
+    survive. This is what a mutation calls. */
+function repaintPane(){
+  if (!panelIsOpen()) return;
+  const body = $('panel').querySelector('.panebody');
+  if (!body) return;
+  /* Swapping the DOM out from under a drag kills it silently — the same
+     reason render() bails mid-gesture. */
+  if (body.querySelector('.rowedit.dragging')) return;
+  const keep = captureFocus(body), top = body.scrollTop;
+  body.innerHTML = '';
+  paintPaneBody(body);
+  body.scrollTop = top;
+  restoreFocus(body, keep);
+  /* The body is rebuilt but the header isn't, so a rename made inside a pane
+     would leave its own title stale. Update the text in place rather than
+     rebuilding — the header holds Back and Close, and churning them is churn
+     for nothing. */
+  refreshPanelTitle();
+}
+
+function refreshPanelTitle(){
+  const hd = $('panel').querySelector('.panelhd');
+  if (!hd) return;
+  const h = hd.querySelector('h3');
+  if (h) h.textContent = paneTitle();
+  const back = hd.querySelector('.backbtn span:not(.chev)');
+  if (back && panelPath.length > 1){
+    const pane = PANES[panelPath[0]];
+    back.textContent = typeof pane.title === 'function'
+      ? pane.title(panelPath.slice(1, -1)) : pane.title;
+  }
+}
+
+function paintPaneBody(body){
+  if (!panelPath.length) return renderSettingsRoot(body);
+  const pane = PANES[panelPath[0]];
+  if (!pane){ panelPath = []; return renderSettingsRoot(body); }
+  /* Undo can replace state wholesale and orphan a course id in the path. */
+  if (panelPath[0] === 'classes' && panelPath[1] && !courseById(panelPath[1]))
+    panelPath = ['classes'];
+  pane.render(body, panelPath.slice(1));
+}
+
+/* Coalesced and deferred by a frame. The defer is load-bearing: an input's
+   onchange fires during blur, and tearing the input out of the DOM inside
+   its own event is how edits get lost. */
+let paneDirty = false;
+function schedulePaneRepaint(){
+  if (paneDirty || !panelIsOpen()) return;
+  paneDirty = true;
+  requestAnimationFrame(() => { paneDirty = false; repaintPane(); });
+}
+
+/* ── keeping focus across a repaint ──────────────────────────────────────
+   Opt-in: a control has to carry data-k, keyed by identity rather than
+   position so it survives a reorder. */
+function captureFocus(root){
+  const a = document.activeElement;
+  if (!a || !root.contains(a)) return null;
+  const k = a.getAttribute && a.getAttribute('data-k');
+  if (!k) return null;
+  const o = { k };
+  if (a.isContentEditable){ o.ce = true; o.at = caretOffset(a); }
+  /* selectionStart throws on <input type=date> in Chrome, and this panel is
+     mostly date inputs. */
+  else try { o.s = a.selectionStart; o.e = a.selectionEnd; } catch(err){}
+  return o;
+}
+function restoreFocus(root, o){
+  if (!o) return;
+  const n = root.querySelector('[data-k="' + CSS.escape(o.k) + '"]');
+  if (!n) return;
+  n.focus({ preventScroll:true });
+  if (o.ce) return setCaret(n, o.at);
+  if (o.s != null && n.setSelectionRange)
+    try { n.setSelectionRange(o.s, o.e); } catch(err){}
+}
+function caretOffset(node){
+  const s = getSelection();
+  if (!s.rangeCount) return 0;
+  const r = s.getRangeAt(0).cloneRange();
+  r.selectNodeContents(node);
+  r.setEnd(s.getRangeAt(0).endContainer, s.getRangeAt(0).endOffset);
+  return r.toString().length;
+}
+function setCaret(node, at){
+  const t = node.firstChild, r = document.createRange();
+  if (t && t.nodeType === 3) r.setStart(t, Math.min(at, t.length));
+  else { r.selectNodeContents(node); r.collapse(false); }
+  r.collapse(true);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+
+/* Half-typed entries live here rather than in the DOM, so a repaint fired by
+   an unrelated control doesn't wipe them. Same trick as exportPick/aiPick. */
+let holidayDraft = { date:'', endDate:'', reason:'' };
+let rowDraft = '';
+
+function renderSettingsRoot(body){
+  const banner = storageBanner();
+  if (banner) body.appendChild(banner);
+  const list = el('div','navlist');
+  Object.entries(PANES).forEach(([key, pane]) => {
+    if (!pane.root) return;
+    const row = el('button','navrow');
+    row.dataset.k = 'nav-' + key;
+    row.appendChild(el('span','n', typeof pane.title === 'function' ? pane.title([]) : pane.title));
+    row.appendChild(el('span','v', pane.summary()));
+    row.appendChild(el('span','chev','›'));
+    row.onclick = () => panelGoto(key);
+    list.appendChild(row);
+  });
+  body.appendChild(list);
+}
+
 function closePanel(){
   $('panel').classList.remove('on');
   $('scrim').classList.remove('on');
@@ -2343,42 +2626,37 @@ function addCourse(){
     });
     ui.courseId = id;
   });
-  editingId = id;
-  openPanel('classes');
+  panelGoto('classes', id);
+  maybePromptStorage();
 }
 
 
-function renderClassesPanel(p){
+function renderClassesPane(box, sub){
+  const editing = sub[0] && courseById(sub[0]);
+  if (editing) return renderClassEditor(box, editing);
+
   const g = el('div','grp');
-  g.appendChild(el('label','','Classes'));
   const list = el('div','clslist');
   state.courses.forEach(c => {
-    const item = el('div','clsitem' + (c.id === editingId ? ' on' : ''));
+    const item = el('div','clsitem');
     item.style.setProperty('--c', c.color);
     item.appendChild(el('span','dot'));
     item.appendChild(el('span','', c.name));
     item.appendChild(el('span','meta',
       c.weekdays.length ? c.weekdays.map(w => DOW3[w][0]).join('') : 'never'));
-    item.onclick = () => { editingId = (editingId === c.id ? null : c.id); openPanel('classes'); };
+    item.appendChild(el('span','chev','›'));
+    item.onclick = () => panelGoto('classes', c.id);
     list.appendChild(item);
   });
   g.appendChild(list);
   const add = el('button','iconbtn','+ Add a class');
   add.onclick = addCourse;
   g.appendChild(add);
-
-  p.appendChild(g);
-
-  const c = state.courses.find(x => x.id === editingId);
-  if (!c) return;
-  p.appendChild(document.createElement('hr'));
-  renderClassEditor(p, c);
+  box.appendChild(g);
 }
 
 function renderClassEditor(p, c){
-  const head = el('div','grp');
-  head.appendChild(el('h4','', 'Editing ' + c.name));
-  p.appendChild(head);
+  /* No "Editing X" heading — the panel header carries the name. */
 
   /* Name */
   const ng = el('div','grp');
@@ -2396,7 +2674,7 @@ function renderClassEditor(p, c){
   PALETTE.forEach(col => {
     const b = el('button','swatch' + (col === c.color ? ' on' : ''));
     b.style.setProperty('--c', col);
-    b.onclick = () => { commit('Colour changed', () => { c.color = col; }); openPanel('classes'); };
+    b.onclick = () => { commit('Colour changed', () => { c.color = col; }); };
     sw.appendChild(b);
   });
   cg.appendChild(sw);
@@ -2417,7 +2695,6 @@ function renderClassEditor(p, c){
           ? c.weekdays.filter(x => x !== w)
           : [...c.weekdays, w].sort((a,b) => a-b);
       });
-      openPanel('classes');
     };
     drow.appendChild(chip);
   });
@@ -2448,7 +2725,7 @@ function renderClassEditor(p, c){
   tg.appendChild(el('label','','Terms'));
   termEditor(tg,
     () => c.terms,
-    v => { commit(`${c.name} terms changed`, () => { c.terms = v; }); openPanel('classes'); },
+    v => { commit(`${c.name} terms changed`, () => { c.terms = v; }); },
     state.terms);
   p.appendChild(tg);
 
@@ -2469,7 +2746,7 @@ function renderClassEditor(p, c){
     txt.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); txt.blur(); } };
     item.appendChild(txt);
     const x = el('button','x','×');
-    x.onclick = () => { commit('Row deleted', () => c.rows.splice(ri,1)); openPanel('classes'); };
+    x.onclick = () => { commit('Row deleted', () => c.rows.splice(ri,1)); };
     item.appendChild(x);
 
     item.ondragstart = e => { e.dataTransfer.setData('text/erow', String(ri)); item.classList.add('dragging'); };
@@ -2487,18 +2764,20 @@ function renderClassEditor(p, c){
         const [m] = c.rows.splice(from,1);
         c.rows.splice(ri,0,m);
       });
-      openPanel('classes');
     };
     rowsG.appendChild(item);
   });
   const addRow = el('div','addrow');
   const rin = document.createElement('input');
   rin.type = 'text'; rin.placeholder = 'New row name';
+  rin.dataset.k = 'row-new';
+  rin.value = rowDraft;
+  rin.oninput = () => { rowDraft = rin.value; };
   const rbtn = el('button','','Add');
   const doAdd = () => {
     const v = rin.value.trim(); if (!v) return;
+    rowDraft = '';
     commit('Row added', () => c.rows.push({ id:uid(), label:v }));
-    openPanel('classes');
   };
   rbtn.onclick = doAdd;
   rin.onkeydown = e => { if (e.key === 'Enter') doAdd(); };
@@ -2516,7 +2795,7 @@ function renderClassEditor(p, c){
       item.appendChild(el('span','r', x.reason || 'No Class'));
       const b = el('button','x','×');
       b.title = 'Restore';
-      b.onclick = () => { restoreMeeting(c, x.date); openPanel('classes'); };
+      b.onclick = () => { restoreMeeting(c, x.date); };
       item.appendChild(b);
       ncg.appendChild(item);
     });
@@ -2535,8 +2814,8 @@ function renderClassEditor(p, c){
       state.courses = state.courses.filter(x => x.id !== c.id);
       if (ui.courseId === c.id) ui.courseId = state.courses[0] ? state.courses[0].id : ALL;
     });
-    editingId = null;
-    openPanel('classes');
+    panelPath = ['classes'];
+    paintPanel();
   };
   del.appendChild(db);
   p.appendChild(del);
@@ -2605,7 +2884,7 @@ function termEditor(box, get, set, inherited){
   box.appendChild(el('div','note','Week numbers count from the start of the current term.'));
 }
 
-function renderCalendarPanel(p){
+function renderYearPane(box){
   const yg = el('div','grp');
   yg.appendChild(el('label','','School year'));
   [['yearStart','First day'],['yearEnd','Last day']].forEach(([k,lab]) => {
@@ -2621,13 +2900,14 @@ function renderCalendarPanel(p){
         if (k === 'yearStart' && state.terms && state.terms.starts.length)
           state.terms.starts[0] = inp.value;
       });
-      openPanel('classes');
     };
     row.appendChild(l); row.appendChild(inp);
     yg.appendChild(row);
   });
-  p.appendChild(yg);
+  box.appendChild(yg);
+}
 
+function renderWeekendsPane(box){
   const wg = el('div','grp');
   wg.appendChild(el('label','','Weekends'));
   const wrow = el('div','dayrow');
@@ -2641,7 +2921,6 @@ function renderCalendarPanel(p){
       if (forced && !v)
         return toast('A class meets at the weekend — turn that off first');
       commit(v ? 'Weekends shown' : 'Weekends hidden', () => { state.weekends = v; });
-      openPanel('classes');
     };
     wrow.appendChild(chip);
   });
@@ -2649,16 +2928,20 @@ function renderCalendarPanel(p){
   wg.appendChild(el('div','note', forced
     ? 'On, because a class is set to meet on a Saturday or Sunday.'
     : 'Adds Saturday and Sunday columns to the week and month views.'));
-  p.appendChild(wg);
+  box.appendChild(wg);
+}
 
+function renderTermsPane(box){
   const tg = el('div','grp');
   tg.appendChild(el('label','','Terms'));
   termEditor(tg,
     () => state.terms,
-    v => { commit('Terms changed', () => { state.terms = v || state.terms; }); openPanel('classes'); },
+    v => { commit('Terms changed', () => { state.terms = v || state.terms; }); },
     null);
-  p.appendChild(tg);
+  box.appendChild(tg);
+}
 
+function renderHolidaysPane(box){
   const hg = el('div','grp');
   hg.appendChild(el('label','','Holidays'));
 
@@ -2688,7 +2971,6 @@ function renderCalendarPanel(p){
       commit('Holiday removed · all classes shifted back', () => {
         state.holidays = state.holidays.filter(q => q.id !== h.id);
       });
-      openPanel('classes');
     };
     item.appendChild(x);
     hg.appendChild(item);
@@ -2699,6 +2981,10 @@ function renderCalendarPanel(p){
   const drow = el('div','addrow');
   const hd = document.createElement('input'); hd.type = 'date'; hd.title = 'First day';
   const he = document.createElement('input'); he.type = 'date'; he.title = 'Last day (optional)';
+  hd.dataset.k = 'hol-from'; he.dataset.k = 'hol-to';
+  hd.value = holidayDraft.date; he.value = holidayDraft.endDate;
+  hd.oninput = () => { holidayDraft.date = hd.value; };
+  he.oninput = () => { holidayDraft.endDate = he.value; };
   const dash = el('span','note','–');
   dash.style.alignSelf = 'center';
   drow.appendChild(hd); drow.appendChild(dash); drow.appendChild(he);
@@ -2706,6 +2992,9 @@ function renderCalendarPanel(p){
 
   const arow = el('div','addrow');
   const hr = document.createElement('input'); hr.type = 'text'; hr.placeholder = 'Reason';
+  hr.dataset.k = 'hol-reason';
+  hr.value = holidayDraft.reason;
+  hr.oninput = () => { holidayDraft.reason = hr.value; };
   const hb = el('button','','Add');
   const add = () => {
     if (!hd.value) return toast('Pick a first day');
@@ -2717,7 +3006,7 @@ function renderCalendarPanel(p){
     commit(one ? 'Holiday added · all classes shifted'
                : `${h.reason} added · ${n} day${n===1?'':'s'} off, all classes shifted`,
            () => { state.holidays.push(h); });
-    openPanel('classes');
+    holidayDraft = { date:'', endDate:'', reason:'' };
   };
   hb.onclick = add;
   hr.onkeydown = e => { if (e.key === 'Enter') add(); };
@@ -2726,9 +3015,9 @@ function renderCalendarPanel(p){
   hg.appendChild(el('div','note',
     'Leave the second date empty for a single day. A break covers everything between the two, ' +
     'applies to every class at once, and undoes as one action.'));
-  p.appendChild(hg);
-
+  box.appendChild(hg);
 }
+
 
 /* Remembered between openings so a second export doesn't re-pick everything. */
 let exportPick = null;
@@ -2747,7 +3036,7 @@ function renderExportPanel(p){
     l.style.minWidth = '64px'; l.style.alignSelf = 'center';
     const inp = document.createElement('input');
     inp.type = 'date'; inp.value = exportPick[k];
-    inp.onchange = () => { exportPick[k] = inp.value; exportPick.touched = true; openPanel('export'); };
+    inp.onchange = () => { exportPick[k] = inp.value; exportPick.touched = true; repaintPane(); };
     row.appendChild(l); row.appendChild(inp);
     rg.appendChild(row);
   });
@@ -2766,7 +3055,7 @@ function renderExportPanel(p){
     item.appendChild(el('span','meta', on ? `${n} day${n===1?'':'s'}` : '—'));
     item.onclick = () => {
       exportPick.ids = on ? exportPick.ids.filter(x => x !== c.id) : [...exportPick.ids, c.id];
-      openPanel('export');
+      repaintPane();
     };
     cg.appendChild(item);
   });
@@ -2778,7 +3067,7 @@ function renderExportPanel(p){
   [[false,'Leave out'],[true,'Show them']].forEach(([v,lab]) => {
     const chip = el('div','daychip' + (exportPick.off === v ? ' on' : ''), lab);
     chip.style.setProperty('--c','var(--accent)');
-    chip.onclick = () => { exportPick.off = v; openPanel('export'); };
+    chip.onclick = () => { exportPick.off = v; repaintPane(); };
     row.appendChild(chip);
   });
   og.appendChild(row);
@@ -3231,8 +3520,9 @@ function exportJson(){
   download(new Blob([JSON.stringify(state,null,2)], { type:'application/json' }),
            `lesson-planner-${iso(new Date())}.json`);
   localStorage.setItem(EXPORT_KEY, String(Date.now()));
+  markClean();
   paintStorageBadge();
-  toast('Exported');
+  toast('Backed up');
 }
 function importJson(file){
   const fr = new FileReader();
@@ -3595,7 +3885,7 @@ function renderAiPanel(p){
     l.style.minWidth = '64px'; l.style.alignSelf = 'center';
     const inp = document.createElement('input');
     inp.type = 'date'; inp.value = aiPick[k];
-    inp.onchange = () => { aiPick[k] = inp.value; openPanel('ai'); };
+    inp.onchange = () => { aiPick[k] = inp.value; repaintPane(); };
     row.appendChild(l); row.appendChild(inp);
     rg.appendChild(row);
   });
@@ -3604,7 +3894,7 @@ function renderAiPanel(p){
     .forEach(([lab,a,b]) => {
       const chip = el('div','daychip' + (aiPick.from === a && aiPick.to === b ? ' on' : ''), lab);
       chip.style.setProperty('--c','var(--accent)');
-      chip.onclick = () => { aiPick.from = a; aiPick.to = b; openPanel('ai'); };
+      chip.onclick = () => { aiPick.from = a; aiPick.to = b; repaintPane(); };
       quick.appendChild(chip);
     });
   rg.appendChild(quick);
@@ -3726,6 +4016,7 @@ async function flushToFolder(){
     try { await writeInto(dirHandle, READABLE_FILE, JSON.stringify(buildAiJson(), null, 2)); }
     catch(e){ console.warn('readable copy failed', e); }
     await rollBackup(text);
+    lastSavedAt = Date.now(); markClean();
     setStorage('saved');
   } catch(e){
     console.warn('folder save failed', e);
@@ -3764,7 +4055,9 @@ function adoptLoaded(data){
   ui.courseId = state.courses[0] ? state.courses[0].id : ALL;
   ui.anchor = clampToYear(iso(new Date()));
   undoStack = []; redoStack = [];
-  invalidateSchedule(); save(); render();
+  lastSavedAt = Date.parse(state.lastWrittenAt) || 0;
+  invalidateSchedule(); save(); render(); schedulePaneRepaint();
+  markClean();
 }
 
 /** Read planner.json from the connected folder, or seed it if absent. */
@@ -3806,7 +4099,7 @@ async function chooseFolder(){
     if (e && e.name === 'AbortError') return;             // user closed the dialog
     console.warn('directory picker failed', e);
     setStorage('denied');
-    openPanel('classes');
+    repaintPane();
     return toast('This page isn’t allowed to open a folder');
   }
   try {
@@ -3825,12 +4118,13 @@ async function chooseFolder(){
     } else {
       await flushToFolder();
     }
+    setupDone();
     toast('Saving to your folder');
   } catch(e){
     console.warn(e); dirHandle = null; setStorage('error');
     toast('Could not use that folder');
   }
-  openPanel('classes');
+  repaintPane();
 }
 
 async function forgetFolder(){
@@ -3838,7 +4132,7 @@ async function forgetFolder(){
   await idbSet('dir', null).catch(() => {});
   localStorage.removeItem(REV_KEY);
   setStorage('none');
-  openPanel('classes');
+  repaintPane();
   toast('Folder disconnected — saving in this browser only');
 }
 
@@ -3850,7 +4144,7 @@ async function reconnectFolder(){
     if (p !== 'granted') return toast('Permission declined');
     dirHandle = pendingHandle; pendingHandle = null;
     await loadFromFolder();
-    openPanel('classes');
+    repaintPane();
   } catch(e){ console.warn(e); toast('Could not reconnect'); }
 }
 
@@ -3873,68 +4167,181 @@ const daysSince = ts => ts ? Math.floor((Date.now() - Number(ts)) / 86400000) : 
 
 function paintStorageBadge(){
   const box = $('storage'); if (!box) return;
+  /* A minute tick must not yank focus off the button under the cursor. */
+  if (box.contains(document.activeElement)) return;
   box.innerHTML = '';
-  if (storageState === 'reconnect'){
-    const b = el('button','warnpill','Reconnect folder');
-    b.title = 'Your saved folder needs permission again';
-    b.onclick = reconnectFolder;
-    return box.appendChild(b);
-  }
-  if (storageState === 'error'){
-    const b = el('button','warnpill','Not saving to folder');
-    b.title = 'Open storage settings';
-    b.onclick = () => openPanel('storage');
-    return box.appendChild(b);
-  }
-  if (dirHandle) return;                       // connected and fine — say nothing
-
-  const stale = daysSince(localStorage.getItem(EXPORT_KEY));
-  if (stale >= 7 && state.courses.length){
-    const b = el('button','warnpill',
-      stale === Infinity ? 'Back up your plans' : `Last backup ${stale} days ago`);
-    b.title = 'Download a backup file now';
-    /* Do the thing, don't point at where the thing lives. A warning that
-       sends you hunting through settings is worse than no warning. */
-    b.onclick = exportJson;
-    box.appendChild(b);
-  }
+  box.appendChild(
+    storageState === 'reconnect' ? reconnectPill() :
+    dirHandle                    ? folderStatusPill()
+                                 : backupPill());
 }
 
-function renderStoragePanel(p){
+/* A remembered folder that lost permission. Not the backup button — the right
+   move here is one click to get the folder back, not a download. */
+function reconnectPill(){
+  const b = el('button','savepill warn');
+  b.appendChild(el('span','dot'));
+  b.appendChild(el('span','t','Reconnect'));
+  if (pendingHandle) b.appendChild(el('span','sub', pendingHandle.name));
+  b.title = 'Your saved folder needs permission again';
+  b.onclick = reconnectFolder;
+  return b;
+}
+
+/* Folder mode. Always visible, so "is it saving?" never has to be asked. */
+function folderStatusPill(){
+  const bad = storageState === 'error', busy = storageState === 'saving';
+  const b = el('button','savepill ' + (bad ? 'warn' : busy ? 'busy' : 'ok'));
+  b.appendChild(el('span','dot'));
+  b.appendChild(el('span','t', bad ? 'Not saving' : busy ? 'Saving…' : savedLabel(lastSavedAt)));
+  b.appendChild(el('span','sub', dirHandle.name));
+  b.title = bad
+    ? 'The last save to your folder failed — click for options'
+    : `Saving automatically to ${dirHandle.name}/${PLANNER_FILE}` +
+      (state.lastWrittenBy && state.lastWrittenBy !== MACHINE
+        ? `\nLast written by ${state.lastWrittenBy}` : '');
+  b.onclick = () => openPanel('saving');
+  return b;
+}
+
+/* Browser-only mode. "Back up", not "Save" — nothing is lost when the tab
+   closes, and a button that overstates the danger is one you learn to ignore. */
+const DIRTY_WARN = 30 * 60000;
+function backupPill(){
+  const age = dirtySince ? Date.now() - dirtySince : 0;
+  const level = !dirtySince ? 'clean' : age >= DIRTY_WARN ? 'warn' : 'dirty';
+  const b = el('button','savepill ' + level);
+  if (level !== 'clean') b.appendChild(el('span','dot'));
+  b.appendChild(el('span','t','Back up'));
+  if (level === 'warn') b.appendChild(el('span','sub', ageLabel(age)));
+  b.title = !dirtySince
+    ? 'Your plans are in this browser only. Download a copy you can keep.'
+    : 'Unsaved changes — download a copy you can keep.';
+  b.onclick = exportJson;
+  return b;
+}
+
+const fmtClock = ms => new Date(ms).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+function savedLabel(ms){
+  /* lastWrittenAt comes off disk and may be junk, or from a skewed clock. */
+  if (!ms || isNaN(ms)) return 'Saved';
+  return 'Saved ' + (iso(new Date(ms)) === iso(new Date()) ? fmtClock(ms) : fmtMed(iso(new Date(ms))));
+}
+function ageLabel(ms){
+  const m = Math.floor(ms / 60000);
+  if (m < 90) return m + ' min';
+  const h = Math.round(m / 60);
+  return h < 36 ? h + ' hr' : Math.round(h / 24) + ' days';
+}
+
+function savingSummary(){
+  if (dirHandle) return dirHandle.name + '/';
+  if (pendingHandle) return 'Needs permission';
+  return CAN_FS ? 'This browser only' : 'No autosave here';
+}
+
+function renderStoragePane(box){
   const g = el('div','grp');
-  g.appendChild(el('label','','Where your plans live'));
 
   if (dirHandle){
+    g.appendChild(el('label','','Saving to'));
     const row = el('div','holitem');
     row.appendChild(el('span','r', dirHandle.name + '/' + PLANNER_FILE));
     g.appendChild(row);
     g.appendChild(el('div','note',
-      'Saved automatically, with a dated copy in backups/ once a day. Put this folder in OneDrive and both computers stay in step.'));
+      'Written automatically as you type, with a dated copy in backups/ once a day. ' +
+      'Keep this folder in OneDrive and both computers stay in step.'));
     const btns = el('div','addrow');
     const ch = el('button','','Change folder'); ch.onclick = chooseFolder;
     const fg = el('button','','Disconnect');    fg.onclick = forgetFolder;
     btns.appendChild(ch); btns.appendChild(fg);
     g.appendChild(btns);
+
   } else if (!CAN_FS){
+    g.appendChild(el('label','','This browser can’t autosave'));
     g.appendChild(el('div','note',
-      'This browser can only save inside itself — clearing browsing data would erase your plans. Chrome or Edge can save to a real folder instead. Until then, use Export often.'));
+      'Safari and Firefox can’t write to a folder you choose, so your plans live inside this ' +
+      'browser only — and clearing browsing data would erase them. Use Back up regularly, or ' +
+      'open the app in Chrome or Edge, where it can save to a folder by itself.'));
+
   } else {
+    g.appendChild(el('label','','Keep your plans in a folder'));
     g.appendChild(el('div','note',
-      'Right now everything is stored inside this browser. Clearing browsing data, or moving this file, loses it. Pick a folder — ideally in OneDrive — and it saves there automatically and syncs between computers.'));
+      'Right now they’re inside this browser. Clearing browsing data loses them. Pick a folder — ' +
+      'ideally in OneDrive — and it saves there by itself and follows you between computers.'));
     const b = el('button','cta', pendingHandle ? 'Reconnect folder' : 'Choose a folder…');
     b.style.justifyContent = 'center';
     b.onclick = pendingHandle ? reconnectFolder : chooseFolder;
     g.appendChild(b);
     if (storageState === 'denied')
       g.appendChild(el('div','note',
-        'That didn’t work from a file opened directly off disk. Your browser may block folder access here — Export stays the reliable backup.'));
-    const stale = daysSince(localStorage.getItem(EXPORT_KEY));
-    if (stale >= 7 && state.courses.length)
-      g.appendChild(el('div','note',
-        stale === Infinity ? 'You haven’t exported a backup yet.'
-                           : `Your last export was ${stale} days ago.`));
+        'That didn’t work here — this page may not be allowed to open a folder. Back up stays the reliable option.'));
   }
-  p.appendChild(g);
+
+  /* Reachable in every mode, so the manual escape hatch always exists. */
+  g.appendChild(document.createElement('hr'));
+  const man = el('div','addrow');
+  const bk = el('button','','Back up now');   bk.onclick = exportJson;
+  const op = el('button','','Open a backup…'); op.onclick = () => $('filepick').click();
+  man.appendChild(bk); man.appendChild(op);
+  g.appendChild(man);
+  const last = Number(localStorage.getItem(EXPORT_KEY)) || 0;
+  g.appendChild(el('div','note', last
+    ? `Last backup ${savedLabel(last).replace('Saved ','')}.`
+    : 'You haven’t downloaded a backup yet.'));
+
+  box.appendChild(g);
+}
+
+/* Asks for a folder — but only where there is one to ask for, and only once
+   there is something worth protecting. Device-local: a folder is a property of
+   this computer, so syncing "already asked" would silence it on the second
+   machine, which is the one that needs it. */
+let promptedThisSession = false;
+const readSetup  = () => { try { return JSON.parse(localStorage.getItem(SETUP_KEY)) || {n:0}; }
+                           catch(e){ return {n:0}; } };
+const writeSetup = o => localStorage.setItem(SETUP_KEY, JSON.stringify(o));
+const setupDone  = () => writeSetup({ done:true });
+
+function maybePromptStorage(){
+  if (promptedThisSession || dirHandle || pendingHandle) return;
+  if (!state.courses.length) return;
+  const rec = readSetup();
+  if (rec.done) return;
+  promptedThisSession = true;
+  if (!CAN_FS){
+    /* No dialog — there's no action to offer in one. Say it once and let the
+       Back up button carry the message from then on. */
+    setupDone();
+    return toast('This browser can’t autosave — use Back up to keep a copy');
+  }
+  if (rec.n >= 3) return;
+  if (rec.at && Date.now() - rec.at < 7 * 864e5) return;
+  writeSetup({ n: rec.n + 1, at: Date.now() });
+  openPanel('saving');
+}
+
+/** A nudge at the top of the settings root while nothing is protecting the data. */
+function storageBanner(){
+  if (dirHandle || !state.courses.length) return null;
+  /* Stops once a folder is set up, or after the third decline — the Saving
+     row still reports the truth, but a banner that never takes no for an
+     answer is one you stop reading. */
+  const rec = readSetup();
+  if (rec.done || (rec.n || 0) >= 3) return null;
+  const g = el('div','grp');
+  const card = el('div','banner');
+  card.appendChild(el('b','', CAN_FS ? 'Your plans aren’t backed up'
+                                     : 'This browser can’t autosave'));
+  card.appendChild(el('div','note', CAN_FS
+    ? 'They live inside this browser. Pick a folder and it saves there by itself.'
+    : 'Chrome or Edge can save to a folder for you. Until then, Back up regularly.'));
+  const b = el('button','cta', CAN_FS ? 'Choose a folder…' : 'Back up now');
+  b.style.justifyContent = 'center';
+  b.onclick = CAN_FS ? chooseFolder : exportJson;
+  card.appendChild(b);
+  g.appendChild(card);
+  return g;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -3962,6 +4369,9 @@ $('prev').onclick = () => step(-1);
 $('next').onclick = () => step(1);
 $('today').onclick = () => { ui.anchor = todayAnchor(); render(); };
 $('btnMore').onclick = openMoreMenu;
+
+/* Drives the Back up escalation. Guarded so it costs nothing the rest of the time. */
+setInterval(() => { if (!dirHandle && dirtySince) paintStorageBadge(); }, 60000);
 $('scrim').onclick = () => { closeSearch(); closePanel(); };
 $('filepick').onchange = e => { if (e.target.files[0]) importJson(e.target.files[0]); };
 
@@ -4031,7 +4441,10 @@ document.addEventListener('keydown', e => {
     if (drag) return cancelDrag();
     if (inEditor()) return document.activeElement.blur();
     if (clearSelection()) return;
-    closeMenu(); closePanel();
+    closeMenu();
+    /* One level at a time — closing outright from three deep loses your place. */
+    if (panelIsOpen() && panelPath.length) return panelBack();
+    closePanel();
   }
 
   if (!mod && !e.altKey && document.activeElement === document.body){
@@ -4047,7 +4460,7 @@ $('searchInput').addEventListener('input', () => {
 });
 
 render();
-restoreFolder();
+restoreFolder().then(maybePromptStorage, maybePromptStorage);
 
 /* ── Installable app, but only when hosted ────────────────────────────
    The manifest, icons and service worker live beside this file on the web

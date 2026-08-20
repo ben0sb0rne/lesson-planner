@@ -71,6 +71,17 @@ Classes can meet Saturday and Sunday. Off by default — the day chips show them
 picked, and Settings has a Hide/Show switch. Setting any class to meet at the weekend turns the
 columns on by itself, since otherwise its lessons would exist with nowhere to appear.
 
+### Settings, rebuilt
+Two-level navigation — a root list of six sections, each showing a live summary, then into one
+section, then into one class. Back drops a level; Escape does the same before it closes.
+
+The old panel rebuilt all fifteen groups after every single click, which lost focus, discarded
+half-typed text and reset scroll. Mutations now repaint only the current section, preserving the
+focused control and its caret, with half-typed entries held in drafts so an unrelated click can't
+wipe them.
+
+The ⋯ menu is six items with no sub-labels. Class tabs drag to reorder.
+
 ### Shipping as a real tool
 Sample/filler data removed — it opens empty and walks you through adding your first class.
 Installable: manifest, icons and an offline service worker, attached only when hosted so the

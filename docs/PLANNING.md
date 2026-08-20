@@ -329,7 +329,32 @@ If the file on disk is *behind* what this machine last wrote — the signature o
 syncing — the app stops and asks, naming both revisions and which machine wrote each. It never
 merges. Automatic merging is how a year of lesson plans gets quietly mangled.
 
-### Browser support — resolved
+### Browser support — the constraint that shapes everything
+
+**`showDirectoryPicker` is Chromium-only.** Chrome and Edge have it; **Safari and Firefox do
+not** — Firefox has only a sandboxed private filesystem that cannot reach OneDrive. This isn't a
+detail, it decides which browser the app has to be run from. Ben initially added the Dock app from
+Safari and consequently had no autosave at all, while Safari's tracking prevention can evict
+localStorage after roughly seven days without a visit — long enough for a school break to erase a
+year of plans.
+
+So the app now states its own limits rather than hiding them:
+
+- **Chrome/Edge** — folder autosave, and a live `● Saved 12:41 · Folder` indicator so it's visible.
+- **Safari/Firefox** — no folder prompt (there's no action to offer), one honest message, and a
+  **Back up** button in the same slot that downloads a copy on demand.
+
+**Not** periodic auto-downloads. A Downloads folder filling with dated JSON is clutter, not safety,
+and clutter gets ignored.
+
+The button says *Back up*, not *Save*, deliberately. In browser-only mode nothing is lost when the
+tab closes — localStorage still holds it — so *Save* would overclaim, and a button that overstates
+the danger is one you learn to click past. *Back up* is what it actually does, which keeps the
+escalated warning meaningful when it appears.
+
+### Old note
+
+
 
 `showDirectoryPicker` is **Chromium only**: Chrome and Edge, which covers the Mac and the PC.
 Safari and Firefox fall back to localStorage, and the settings panel says so plainly. A warning
