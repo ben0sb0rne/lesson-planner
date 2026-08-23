@@ -93,7 +93,7 @@ body.dragging *{cursor:grabbing!important}
   content:''; position:absolute; left:8px; right:8px; bottom:-1px; height:2px;
   background:var(--c); border-radius:2px 2px 0 0;
 }
-.tab.sep{margin-left:10px; padding-left:20px; border-left:1px solid var(--border)}
+.tab.allcls{margin-right:10px; padding-right:20px; border-right:1px solid var(--border)}
 .tab .nm[contenteditable="true"]{
   min-width:2ch; padding:1px 5px; margin:-1px -5px; border-radius:5px;
   background:var(--bg); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent);
@@ -178,6 +178,9 @@ body.dragging *{cursor:grabbing!important}
 .rowlabel.dragging{opacity:.4}
 .rowlabel.over{border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent)}
 .rowlabel .grip{color:var(--faint); font-size:13px; letter-spacing:-2px}
+/* A row that exists for one week only — dashed, so it reads as temporary. */
+.rowlabel.weekrow{border-style:dashed; cursor:default}
+.rowlabel.weekrow .grip{letter-spacing:0; font-size:11px}
 /* A row name wraps onto as many lines as it needs. "Differentiati…" told
    you nothing; the grid can afford the height now that rows stretch. */
 .rowlabel .txt{flex:1; min-width:0; white-space:normal; overflow-wrap:break-word;
@@ -248,6 +251,8 @@ body.dragging *{cursor:grabbing!important}
 .statuspill i{width:7px; height:7px; border-radius:50%; background:var(--s); display:block; flex:0 0 auto}
 .statuspill.set{border-color:color-mix(in srgb,var(--s) 50%,transparent); color:var(--s)}
 .statuspill.unset i{background:transparent; border:1.5px solid var(--border-strong)}
+/* Inferred rather than chosen — present, but not shouting. */
+.statuspill.soft{border-style:dashed; opacity:.85}
 .statuspill:hover{border-color:var(--border-strong); color:var(--text)}
 .statuspill.set:hover{color:var(--s)}
 .sdot{width:7px; height:7px; border-radius:50%; background:var(--s); flex:0 0 auto}
@@ -410,7 +415,7 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
 }
 .mrow.absent .mc{opacity:.3}
 .mrow.void .mc{opacity:.14}
-.mrow .md{width:7px; height:7px; border-radius:50%; background:var(--t); flex:0 0 auto}
+.mrow .md{width:7px; height:7px; border-radius:2px; background:var(--t); flex:0 0 auto}
 .mrow .md.no{background:transparent}
 .mrow .mt{
   flex:1; min-width:0; font-size:11.5px; font-weight:520; line-height:1.25;
@@ -487,6 +492,12 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
 .menu hr{border:none; border-top:1px solid var(--border); margin:4px 0}
 .menu .sw{width:11px;height:11px;border-radius:3px;background:var(--t);flex:0 0 auto}
 .menu .sw.none{background:transparent;border:1px dashed var(--border-strong)}
+/* The same hatching the calendar uses for a day with no class. */
+.menu .sw.nc{
+  background:repeating-linear-gradient(45deg,var(--border-strong),var(--border-strong) 2px,
+    transparent 2px,transparent 4px);
+  border:1px solid var(--border-strong);
+}
 
 /* ─────────────────────────── Toast ─────────────────────────── */
 .toast{
@@ -534,7 +545,11 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
 .panel .grp{display:flex; flex-direction:column; gap:8px}
 .panel .grp>label{font-size:11px;font-weight:700;color:var(--muted);
   text-transform:uppercase;letter-spacing:.07em}
-.panel input[type=text],.panel input[type=date]{
+/* A group inside a section is a sub-heading, not a peer of it. */
+.panel .grp .grp>label{font-size:11px;font-weight:600;color:var(--faint);
+  text-transform:none;letter-spacing:0}
+.panel .grp .grp{gap:6px}
+.panel input[type=text],.panel input[type=date],.panel input[type=number]{
   padding:7px 10px; border:1px solid var(--border); border-radius:7px;
   background:var(--bg); outline:none; width:100%;
 }
@@ -755,14 +770,17 @@ kbd{
    CONSTANTS
    ═══════════════════════════════════════════════════════════════════ */
 
+/* Two axes, deliberately kept apart. TAGS say what a lesson IS and live in
+   the cool half; STATUS says how ready it is and runs the warm traffic light.
+   Any tag added later has to stay cool, or the two start reading as one. */
 const TAGS = {
   none:    { label:'No tag',     color:'transparent' },
-  test:    { label:'Test',       color:'#dc2626' },
-  quiz:    { label:'Quiz',       color:'#ea580c' },
-  lab:     { label:'Lab',        color:'#0d9488' },
-  project: { label:'Project',    color:'#7c3aed' },
-  review:  { label:'Review',     color:'#2563eb' },
-  trip:    { label:'Field Trip', color:'#16a34a' },
+  test:    { label:'Test',       color:'#4338ca' },   /* indigo — the heaviest */
+  quiz:    { label:'Quiz',       color:'#7c3aed' },   /* violet — test's sibling */
+  lab:     { label:'Lab',        color:'#0d9488' },   /* teal — hands-on */
+  project: { label:'Project',    color:'#c026d3' },   /* fuchsia — creative */
+  review:  { label:'Review',     color:'#0284c7' },   /* sky — consolidation */
+  trip:    { label:'Field Trip', color:'#db2777' },   /* pink — the outing */
 };
 /* Tags that count as an assessment for collision detection in the month view. */
 const ASSESSMENT = new Set(['test','quiz']);
@@ -771,10 +789,26 @@ const ASSESSMENT = new Set(['test','quiz']);
    a different question, so it gets its own control rather than crowding the
    tag list. Deliberately short: anything finer becomes a chore to maintain. */
 const STATUS = {
-  ready:   { label:'Ready',       short:'Ready',   color:'#16a34a' },
-  wip:     { label:'In Progress', short:'WIP',     color:'#d97706' },
-  waiting: { label:'Waiting on Materials', short:'Waiting', color:'#dc2626' },
+  unplanned: { label:'Unplanned',   short:'Unplanned', color:'#dc2626' },
+  wip:       { label:'In Progress', short:'WIP',       color:'#f97316' },
+  waiting:   { label:'Waiting on Materials', short:'Waiting', color:'#eab308' },
+  ready:     { label:'Ready',       short:'Ready',     color:'#16a34a' },
 };
+
+/* An untouched lesson far out isn't a problem, it's just future work. So
+   "Unplanned" is only asserted inside a horizon — from today out to
+   state.planAhead weeks. Behind it, nothing: you already taught that. */
+const DEFAULT_PLAN_AHEAD = 2;
+const planAheadWeeks = () => Math.max(0, Number(state.planAhead ?? DEFAULT_PLAN_AHEAD));
+
+function effectiveStatus(lesson, date){
+  if (lesson && lesson.status && STATUS[lesson.status]) return lesson.status;
+  if (!date) return null;
+  const today = iso(new Date());
+  if (date < today) return null;
+  if (date > addDays(today, planAheadWeeks() * 7)) return null;
+  return 'unplanned';
+}
 
 const DOW  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const DOW3 = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -919,6 +953,17 @@ function load(){
 }
 
 /** Bring older files forward. v1 = rotating cycle, v2 = weekdays, v3 = terms. */
+/** Rows this class shows only during a given calendar week. Pinned to dates,
+    not to lesson positions — so nothing in the ripple engine has to know they
+    exist, and inserting a day earlier leaves them on the week they were made
+    for rather than dragging them along. */
+function weekRowsOn(course, date){
+  return (course.weekRows || []).filter(r => date >= r.from && date <= r.to);
+}
+/** Every row a given date shows: the class's permanent set, then this week's. */
+const rowsFor = (course, date) =>
+  date ? course.rows.concat(weekRowsOn(course, date)) : course.rows;
+
 function migrate(data){
   if (!data || !data.courses) return emptyState();
   if (data.schemaVersion >= 3) return data;
@@ -1172,7 +1217,7 @@ const restoreMeeting = (c, date) =>
 
 state = load();
 ui = { view:'week', courseId: state.courses[0] ? state.courses[0].id : ALL, anchor:'' };
-ui.anchor = clampToYear(iso(new Date()));
+ui.anchor = todayAnchor();
 
 function clampToYear(d){
   if (d < state.yearStart) return state.yearStart;
@@ -1242,6 +1287,20 @@ function renderViews(){
 
 function renderTabs(){
   const box = $('tabs'); box.innerHTML = '';
+  if (state.courses.length){
+    const t = el('button','tab allcls' + (isAll() ? ' on' : ''));
+    t.style.setProperty('--c','var(--muted)');
+    const dots = el('span','dots');
+    state.courses.slice(0,4).forEach(c => {
+      const i = document.createElement('i');
+      i.style.background = c.color;
+      dots.appendChild(i);
+    });
+    t.appendChild(dots);
+    t.appendChild(el('span','','All Classes'));
+    t.onclick = () => { ui.courseId = ALL; render(); };
+    box.appendChild(t);
+  }
   state.courses.forEach((c, ci) => {
     const t = el('button', 'tab' + (c.id === ui.courseId ? ' on' : ''));
     t.style.setProperty('--c', c.color);
@@ -1279,20 +1338,6 @@ function renderTabs(){
     };
     box.appendChild(t);
   });
-  if (state.courses.length){
-    const t = el('button','tab sep' + (isAll() ? ' on' : ''));
-    t.style.setProperty('--c','var(--muted)');
-    const dots = el('span','dots');
-    state.courses.slice(0,4).forEach(c => {
-      const i = document.createElement('i');
-      i.style.background = c.color;
-      dots.appendChild(i);
-    });
-    t.appendChild(dots);
-    t.appendChild(el('span','','All Classes'));
-    t.onclick = () => { ui.courseId = ALL; render(); };
-    box.appendChild(t);
-  }
 }
 
 /**
@@ -1336,8 +1381,10 @@ function renameTab(span, c){
     empty state rather than a lesson. */
 function todayAnchor(){
   let d = clampToYear(iso(new Date()));
-  if (ui.view === 'day')
-    for (let i = 0; i < 7 && !isVisibleDay(d); i++) d = clampToYear(addDays(d, 1));
+  /* On a Saturday you're not still planning the week you just taught. Roll to
+     the next day that's actually on screen — unless weekends are shown, in
+     which case Saturday IS on screen and nothing should move. */
+  for (let i = 0; i < 7 && !isVisibleDay(d); i++) d = clampToYear(addDays(d, 1));
   return d;
 }
 
@@ -1405,18 +1452,20 @@ function renderWeek(stage){
   grid.style.setProperty('--rowh','66px');
   grid.style.setProperty('--headh','86px');
   grid.style.gridTemplateColumns = `180px repeat(${dates.length}, minmax(190px,1fr))`;
-  /* header row, one row per component, then a row for the + Row button */
-  const nRows = c.rows.length;
+  /* header row, one row per component, then a row for the + Row button. Every
+     column in a week shows the same rows, so a week row lands on all of them. */
+  const weekRows = weekRowsOn(c, dates[0]);
+  const nRows = c.rows.length + weekRows.length;
   grid.style.gridTemplateRows = `auto repeat(${nRows}, auto) auto`;
-  grid.dataset.span = String(nRows + 1);
 
   /* Row labels */
   const labels = el('div','rowlabels');
   labels.appendChild(el('div','rl-spacer'));
   c.rows.forEach((r,ri) => labels.appendChild(rowLabel(c, r, ri)));
+  weekRows.forEach(r => labels.appendChild(weekRowLabel(c, r)));
   const add = el('button','addrowmini','+ Row');
-  add.title = 'Add a row to this class';
-  add.onclick = () => commit('Row added', () => c.rows.push({ id:uid(), label:'New row' }));
+  add.title = 'Add a row';
+  add.onclick = e => openAddRowMenu(e, c, dates);
   labels.appendChild(add);
   grid.appendChild(labels);
 
@@ -1510,7 +1559,10 @@ function makeTitle(lesson){
 
 function offColumn(title, sub, date){
   const col = el('div','daycol offday' + (date && date === iso(new Date()) ? ' istoday' : ''));
-  col.style.gridRow = '1 / -1';
+  /* -2, not -1: the last row belongs to the "+ Row" button in the labels
+     column, and stretching into it makes the striped block hang past the
+     bottom of every real day. */
+  col.style.gridRow = '1 / -2';
   const box = el('div','offcol');
   box.appendChild(el('b','', title));
   box.appendChild(el('span','', sub));
@@ -1563,11 +1615,39 @@ function rowLabel(c, r, ri){
   return rl;
 }
 
+/** A week row's label. Marked so it doesn't read as part of the class. */
+function weekRowLabel(c, r){
+  const rl = el('div','rowlabel weekrow');
+  rl.appendChild(el('span','grip','◷'));
+  rl.title = `Just this week (${fmtMed(r.from)} – ${fmtMed(r.to)})`;
+  rl.appendChild(el('span','txt', r.label));
+  const x = el('button','x','×');
+  x.title = 'Remove this week row';
+  x.onclick = () => commit('Week row removed',
+    () => { c.weekRows = (c.weekRows || []).filter(w => w.id !== r.id); });
+  rl.appendChild(x);
+  return rl;
+}
+
+function openAddRowMenu(e, c, dates){
+  const m = $('menu'); m.innerHTML = '';
+  m.appendChild(el('div','sec','Add a row'));
+  menuItem(m, 'To this class', () =>
+    commit('Row added', () => c.rows.push({ id:uid(), label:'New row' })),
+    '', 'Every week, from now on');
+  menuItem(m, 'Just this week', () =>
+    commit('Week row added', () => {
+      c.weekRows = (c.weekRows || []).concat(
+        { id:uid(), label:'This week', from:dates[0], to:dates[dates.length-1] });
+    }), '', fmtMed(dates[0]) + ' – ' + fmtMed(dates[dates.length-1]));
+  placeMenu(e);
+}
+
 function dayColumn(c, date, idx){
   const lesson = ensureLesson(c, idx);
   const col = el('div','daycol' + (date === iso(new Date()) ? ' istoday' : ''));
   /* header + one row per component; the + Row row belongs to the labels only */
-  col.style.gridRow = `1 / span ${c.rows.length + 1}`;
+  col.style.gridRow = `1 / span ${rowsFor(c, date).length + 1}`;
   col.dataset.idx  = String(idx);
   col.dataset.date = date;
 
@@ -1585,8 +1665,9 @@ function dayColumn(c, date, idx){
                   lesson.tag === 'none' ? '+ tag' : TAGS[lesson.tag].label);
   pill.style.setProperty('--t', TAGS[lesson.tag].color);
   pill.onclick = e => { e.stopPropagation(); openTagMenu(e, c, idx, date); };
+  /* Status first: "is this ready" is the question being scanned for. */
+  tagrow.appendChild(statusPill(c, idx, lesson, false, date));
   tagrow.appendChild(pill);
-  tagrow.appendChild(statusPill(c, idx, lesson, false));
   head.appendChild(tagrow);
 
   const grip = el('button','grip','⋮⋮');
@@ -1600,7 +1681,7 @@ function dayColumn(c, date, idx){
 
   col.appendChild(head);
 
-  c.rows.forEach(r => {
+  rowsFor(c, date).forEach(r => {
     const cell = makeCell(lesson, r.id);
     cell.oncontextmenu = e => { e.preventDefault(); openCellMenu(e, c, idx, r); };
     col.appendChild(cell);
@@ -1878,14 +1959,14 @@ function renderDay(stage){
                   lesson.tag === 'none' ? '+ tag' : TAGS[lesson.tag].label);
   pill.style.setProperty('--t', TAGS[lesson.tag].color);
   pill.onclick = e => openTagMenu(e, c, idx, date);
+  hd.appendChild(statusPill(c, idx, lesson, true, date));
   hd.appendChild(pill);
-  hd.appendChild(statusPill(c, idx, lesson, true));
   card.appendChild(hd);
 
   card.appendChild(makeTitle(lesson));
   wrap.appendChild(card);
 
-  c.rows.forEach(r => {
+  rowsFor(c, date).forEach(r => {
     const box = el('div','card');
     box.appendChild(el('div','lbl', r.label));
     box.appendChild(makeCell(lesson, r.id));
@@ -1987,7 +2068,7 @@ function shortLabel(name){
 function classLegend(){
   const box = el('div','legend');
   box.appendChild(el('div','k',
-    'Coloured dot = tagged · ruled line = not planned yet · ⚠ = two or more assessments'));
+    'Square = tag · round = status · ruled line = nothing planned · ⚠ = two or more assessments'));
   return box;
 }
 
@@ -2062,6 +2143,13 @@ function renderAllMonth(stage){
             dot.style.setProperty('--t', TAGS[l.tag].color);
             row.style.setProperty('--w',
               `color-mix(in srgb, ${TAGS[l.tag].color} 12%, transparent)`);
+          }
+          const stKey = effectiveStatus(l, date);
+          if (stKey){
+            const sd = el('i','sdot');
+            sd.style.setProperty('--s', STATUS[stKey].color);
+            sd.title = STATUS[stKey].label;
+            row.appendChild(sd);
           }
           row.appendChild(l.title ? el('div','mt', l.title) : el('div','mt blank'));
           row.title = `${c.name} · ${l.title || 'Not planned'}` +
@@ -2251,7 +2339,7 @@ function openDayMenu(e, c, idx, date){
   menuItem(m, 'Clear day', () => clearDay(c, idx), '', 'Keeps the meeting, wipes the plan');
   menuItem(m, 'Remove day', () => removeDay(c, idx), 'danger', 'Everything after slides back');
   m.appendChild(document.createElement('hr'));
-  menuItem(m, 'Mark “No Class”', () => cancelMeeting(c, date), '', `${c.name} skips this date`);
+  ncMenuItem(m, c, date);
   if (state.courses.length > 1){
     m.appendChild(document.createElement('hr'));
     m.appendChild(el('div','sec','Copy this day to'));
@@ -2262,13 +2350,17 @@ function openDayMenu(e, c, idx, date){
 }
 
 /** The status control: a dot plus a word, or a hollow dot when unset. */
-function statusPill(c, idx, lesson, useLongLabel){
-  const st = lesson.status && STATUS[lesson.status] ? STATUS[lesson.status] : null;
-  const b = el('button','statuspill ' + (st ? 'set' : 'unset'));
+function statusPill(c, idx, lesson, useLongLabel, date){
+  const key = effectiveStatus(lesson, date);
+  const st = key ? STATUS[key] : null;
+  /* An inferred Unplanned is stated more quietly than one you chose. */
+  const inferred = st && !(lesson && lesson.status);
+  const b = el('button','statuspill ' + (st ? 'set' : 'unset') + (inferred ? ' soft' : ''));
   b.style.setProperty('--s', st ? st.color : 'transparent');
   b.appendChild(el('i',''));
   if (st) b.appendChild(document.createTextNode(useLongLabel ? st.label : st.short));
-  b.title = st ? `Status: ${st.label}` : 'Set a status';
+  b.title = st ? (inferred ? st.label + ' — nothing set yet' : 'Status: ' + st.label)
+               : 'Set a status';
   b.onclick = e => { e.stopPropagation(); openStatusMenu(e, c, idx); };
   return b;
 }
@@ -2296,6 +2388,14 @@ function openStatusMenu(e, c, idx){
   placeMenu(e);
 }
 
+/** Same shape as every tag row, but striped rather than coloured. */
+function ncMenuItem(m, c, date){
+  const b = menuItem(m, 'Mark “No Class”', () => cancelMeeting(c, date), '',
+                     `${c.name} skips this date`);
+  b.insertBefore(el('span','sw nc'), b.firstChild);
+  return b;
+}
+
 function openTagMenu(e, c, idx, date){
   const m = $('menu'); m.innerHTML = '';
   m.appendChild(el('div','sec','Tag this day'));
@@ -2313,7 +2413,7 @@ function openTagMenu(e, c, idx, date){
     m.appendChild(b);
   });
   m.appendChild(document.createElement('hr'));
-  menuItem(m, 'Mark “No Class”', () => cancelMeeting(c, date), '', `${c.name} skips this date`);
+  ncMenuItem(m, c, date);
   placeMenu(e);
 }
 
@@ -2409,36 +2509,16 @@ const courseById = id => state.courses.find(c => c.id === id) || null;
 const PANES = {
   classes: {
     title: sub => sub[0] ? ((courseById(sub[0]) || {}).name || 'Class') : 'Classes',
-    root: true,
     summary: () => `${state.courses.length} class${state.courses.length === 1 ? '' : 'es'}`,
     render: renderClassesPane,
   },
-  year: {
-    title: 'School year', root: true,
-    summary: () => `${fmtMed(state.yearStart)} – ${fmtMed(state.yearEnd)}`,
-    render: renderYearPane,
-  },
-  terms: {
-    title: 'Terms', root: true,
-    summary: () => (TERM_MODES[state.terms.mode] || {}).label || '—',
-    render: renderTermsPane,
-  },
   holidays: {
-    title: 'Holidays', root: true,
+    title: 'Holidays',
     summary: () => state.holidays.length
       ? `${state.holidays.length} break${state.holidays.length === 1 ? '' : 's'}` : 'None',
     render: renderHolidaysPane,
   },
-  weekends: {
-    title: 'Weekends', root: true,
-    summary: () => showWeekends() ? (weekendsInUse() ? 'On · a class meets' : 'On') : 'Off',
-    render: renderWeekendsPane,
-  },
-  saving: {
-    title: 'Saving', root: true,
-    summary: () => savingSummary(),
-    render: renderStoragePane,
-  },
+  saving: { title: 'Saving', summary: () => savingSummary(), render: renderStoragePane },
   help:   { title:'Help & shortcuts', standalone:true, render: renderHelp },
   export: { title:'Export to Excel',  standalone:true, render: renderExportPanel },
   ai:     { title:'Export for AI',    standalone:true, render: renderAiPanel },
@@ -2502,8 +2582,10 @@ function repaintPane(){
   const body = $('panel').querySelector('.panebody');
   if (!body) return;
   /* Swapping the DOM out from under a drag kills it silently — the same
-     reason render() bails mid-gesture. */
-  if (body.querySelector('.rowedit.dragging')) return;
+     reason render() bails mid-gesture. Re-arm rather than drop it: dragend
+     lands after this frame on macOS, so the very repaint that matters most
+     (the drop's own) is the one that would otherwise be thrown away. */
+  if (body.querySelector('.rowedit.dragging')) return retryPaneRepaint();
   const keep = captureFocus(body), top = body.scrollTop;
   body.innerHTML = '';
   paintPaneBody(body);
@@ -2547,6 +2629,13 @@ function schedulePaneRepaint(){
   if (paneDirty || !panelIsOpen()) return;
   paneDirty = true;
   requestAnimationFrame(() => { paneDirty = false; repaintPane(); });
+}
+
+/* A repaint that had to stand aside for a drag must come back, not evaporate.
+   Losing it is how a reorder ends up committed to state and invisible on
+   screen — the mutation is real, the DOM just never hears about it. */
+function retryPaneRepaint(){
+  setTimeout(() => { paneDirty = false; schedulePaneRepaint(); }, 60);
 }
 
 /* ── keeping focus across a repaint ──────────────────────────────────────
@@ -2597,18 +2686,61 @@ let rowDraft = '';
 function renderSettingsRoot(body){
   const banner = storageBanner();
   if (banner) body.appendChild(banner);
-  const list = el('div','navlist');
-  Object.entries(PANES).forEach(([key, pane]) => {
-    if (!pane.root) return;
-    const row = el('button','navrow');
-    row.dataset.k = 'nav-' + key;
-    row.appendChild(el('span','n', typeof pane.title === 'function' ? pane.title([]) : pane.title));
-    row.appendChild(el('span','v', pane.summary()));
-    row.appendChild(el('span','chev','›'));
-    row.onclick = () => panelGoto(key);
-    list.appendChild(row);
-  });
-  body.appendChild(list);
+
+  /* Classes are the thing opened most, so they're never behind a door. */
+  const cg = el('div','grp');
+  cg.appendChild(el('label','','Classes'));
+  renderClassList(cg);
+  body.appendChild(cg);
+
+  /* One block for everything calendar-shaped. Holidays is the only list that
+     grows without bound, so it's the only one that gets a page of its own. */
+  const kg = el('div','grp');
+  kg.appendChild(el('label','','Calendar'));
+  renderYearPane(kg);
+  renderTermsPane(kg);
+  renderWeekendsPane(kg);
+  renderPlanAhead(kg);
+  const hrow = navRow('holidays', 'Holidays', PANES.holidays.summary());
+  hrow.style.marginTop = '4px';
+  kg.appendChild(hrow);
+  body.appendChild(kg);
+
+  const sg = el('div','grp');
+  sg.appendChild(navRow('saving', savingTitle(), PANES.saving.summary()));
+  body.appendChild(sg);
+}
+
+const savingTitle = () => dirHandle ? 'Saving to a folder' : 'Where plans are saved';
+
+function navRow(key, name, value){
+  const row = el('button','navrow');
+  row.dataset.k = 'nav-' + key;
+  row.appendChild(el('span','n', name));
+  row.appendChild(el('span','v', value));
+  row.appendChild(el('span','chev','›'));
+  row.onclick = () => panelGoto(key);
+  return row;
+}
+
+/** How far ahead an unplanned lesson is worth flagging. */
+function renderPlanAhead(box){
+  const row = el('div','addrow');
+  const l = el('span','note','Plan ahead');
+  l.style.minWidth = '86px'; l.style.alignSelf = 'center';
+  const inp = document.createElement('input');
+  inp.type = 'number'; inp.min = '0'; inp.max = '52';
+  inp.dataset.k = 'planahead';
+  inp.value = String(planAheadWeeks());
+  inp.style.maxWidth = '70px';
+  inp.onchange = () => commit('Plan-ahead changed',
+    () => { state.planAhead = Math.max(0, Math.min(52, Number(inp.value) || 0)); });
+  const suffix = el('span','note','weeks');
+  suffix.style.alignSelf = 'center';
+  row.appendChild(l); row.appendChild(inp); row.appendChild(suffix);
+  box.appendChild(row);
+  box.appendChild(el('div','note',
+    'Lessons with nothing set inside this window are marked Unplanned. Further out they stay quiet.'));
 }
 
 function closePanel(){
@@ -2622,7 +2754,8 @@ function addCourse(){
     state.courses.push({
       id, name:'New class', color: PALETTE[state.courses.length % PALETTE.length],
       weekdays:[...WEEKDAYS], rows: mkRows(['Homework Due','Opener','Procedure']),
-      startDate: state.yearStart, endDate: state.yearEnd, terms:null, cancelled:[], lessons:[],
+      startDate: state.yearStart, endDate: state.yearEnd, terms:null,
+      cancelled:[], weekRows:[], lessons:[],
     });
     ui.courseId = id;
   });
@@ -2634,8 +2767,13 @@ function addCourse(){
 function renderClassesPane(box, sub){
   const editing = sub[0] && courseById(sub[0]);
   if (editing) return renderClassEditor(box, editing);
-
   const g = el('div','grp');
+  renderClassList(g);
+  box.appendChild(g);
+}
+
+/** The list itself — shared by the settings root and the Classes pane. */
+function renderClassList(g){
   const list = el('div','clslist');
   state.courses.forEach(c => {
     const item = el('div','clsitem');
@@ -2652,7 +2790,17 @@ function renderClassesPane(box, sub){
   const add = el('button','iconbtn','+ Add a class');
   add.onclick = addCourse;
   g.appendChild(add);
-  box.appendChild(g);
+}
+
+/** Move a row, and clear the drag marker first so the repaint that follows
+    isn't waved away by its own guard. */
+function dropRow(c, from, to){
+  document.querySelectorAll('.rowedit.dragging').forEach(n => n.classList.remove('dragging'));
+  if (Number.isNaN(from) || from === to) return;
+  commit('Rows reordered', () => {
+    const [m] = c.rows.splice(from, 1);
+    c.rows.splice(to, 0, m);
+  });
 }
 
 function renderClassEditor(p, c){
@@ -2749,7 +2897,12 @@ function renderClassEditor(p, c){
     x.onclick = () => { commit('Row deleted', () => c.rows.splice(ri,1)); };
     item.appendChild(x);
 
-    item.ondragstart = e => { e.dataTransfer.setData('text/erow', String(ri)); item.classList.add('dragging'); };
+    item.ondragstart = e => {
+      if (txt.isContentEditable && document.activeElement === txt) return e.preventDefault();
+      e.dataTransfer.setData('text/erow', String(ri));
+      e.dataTransfer.effectAllowed = 'move';   /* without this macOS shows a copy badge */
+      item.classList.add('dragging');
+    };
     item.ondragend   = () => item.classList.remove('dragging');
     item.ondragover  = e => {
       if (!e.dataTransfer.types.includes('text/erow')) return;
@@ -2758,12 +2911,7 @@ function renderClassEditor(p, c){
     item.ondragleave = () => item.classList.remove('over');
     item.ondrop = e => {
       e.preventDefault(); item.classList.remove('over');
-      const from = Number(e.dataTransfer.getData('text/erow'));
-      if (from === ri) return;
-      commit('Rows reordered', () => {
-        const [m] = c.rows.splice(from,1);
-        c.rows.splice(ri,0,m);
-      });
+      dropRow(c, Number(e.dataTransfer.getData('text/erow')), ri);
     };
     rowsG.appendChild(item);
   });
@@ -2782,6 +2930,17 @@ function renderClassEditor(p, c){
   rbtn.onclick = doAdd;
   rin.onkeydown = e => { if (e.key === 'Enter') doAdd(); };
   addRow.appendChild(rin); addRow.appendChild(rbtn);
+  /* .grp has an 8px gap, so without this the strips between rows swallow a
+     drop and nothing happens. */
+  rowsG.ondragover = e => {
+    if (e.dataTransfer.types.includes('text/erow')) e.preventDefault();
+  };
+  rowsG.ondrop = e => {
+    if (!e.dataTransfer.types.includes('text/erow')) return;
+    e.preventDefault();
+    const from = Number(e.dataTransfer.getData('text/erow'));
+    dropRow(c, from, c.rows.length - 1);
+  };
   rowsG.appendChild(addRow);
   p.appendChild(rowsG);
 
@@ -3406,7 +3565,9 @@ function sheetXml(c, days){
           : cellXml(ref(i), XF.body, '');
       })), 18);
 
-  c.rows.forEach(row => {
+  const exportRows = c.rows.concat(
+    (c.weekRows || []).filter(r => days.some(d => d.date >= r.from && d.date <= r.to)));
+  exportRows.forEach(row => {
     const texts = lessons.map(l => l ? htmlToText(l.cells[row.id]) : '');
     const lines = texts.reduce((n,t) => Math.max(n, t ? t.split('\n').length : 1), 1);
     push([cellXml(`A${r}`, XF.rowlabel, row.label)].concat(
@@ -4053,7 +4214,7 @@ function adoptLoaded(data){
   state = migrate(data);
   localStorage.setItem(REV_KEY, String(state.revision || 0));
   ui.courseId = state.courses[0] ? state.courses[0].id : ALL;
-  ui.anchor = clampToYear(iso(new Date()));
+  ui.anchor = todayAnchor();
   undoStack = []; redoStack = [];
   lastSavedAt = Date.parse(state.lastWrittenAt) || 0;
   invalidateSchedule(); save(); render(); schedulePaneRepaint();
@@ -4194,14 +4355,21 @@ function folderStatusPill(){
   const b = el('button','savepill ' + (bad ? 'warn' : busy ? 'busy' : 'ok'));
   b.appendChild(el('span','dot'));
   b.appendChild(el('span','t', bad ? 'Not saving' : busy ? 'Saving…' : savedLabel(lastSavedAt)));
-  b.appendChild(el('span','sub', dirHandle.name));
-  b.title = bad
-    ? 'The last save to your folder failed — click for options'
-    : `Saving automatically to ${dirHandle.name}/${PLANNER_FILE}` +
-      (state.lastWrittenBy && state.lastWrittenBy !== MACHINE
-        ? `\nLast written by ${state.lastWrittenBy}` : '');
-  b.onclick = () => openPanel('saving');
+  b.title = (bad ? 'The last save failed. ' : '') +
+    `Click or ⌘S to save now — ${dirHandle.name}/${PLANNER_FILE}` +
+    (state.lastWrittenBy && state.lastWrittenBy !== MACHINE
+      ? `\nLast written by ${state.lastWrittenBy}` : '');
+  /* A status you can act on. Clicking a thing that says "Saved" and being
+     shown a settings page is a small betrayal. */
+  b.onclick = saveNow;
   return b;
+}
+
+/** Force a write this instant rather than waiting out the debounce. */
+function saveNow(){
+  if (!dirHandle) return exportJson();
+  clearTimeout(saveTimer);
+  flushToFolder();
 }
 
 /* Browser-only mode. "Back up", not "Save" — nothing is lost when the tab
@@ -4214,10 +4382,10 @@ function backupPill(){
   if (level !== 'clean') b.appendChild(el('span','dot'));
   b.appendChild(el('span','t','Back up'));
   if (level === 'warn') b.appendChild(el('span','sub', ageLabel(age)));
+  b.onclick = saveNow;
   b.title = !dirtySince
     ? 'Your plans are in this browser only. Download a copy you can keep.'
     : 'Unsaved changes — download a copy you can keep.';
-  b.onclick = exportJson;
   return b;
 }
 
@@ -4429,6 +4597,14 @@ document.addEventListener('keydown', e => {
     if (document.activeElement && document.activeElement.isContentEditable) return;
     e.preventDefault();
     e.shiftKey ? redo() : undo();
+  }
+
+  /* ⌘S saves. Not gated on isContentEditable — the moment you most want it is
+     mid-sentence — and preventDefault is what stops the browser's Save Page. */
+  if (mod && e.key.toLowerCase() === 's'){
+    e.preventDefault();
+    saveNow();
+    return;
   }
 
   /* Alt + ← / → hops sideways between days without leaving the keyboard. */

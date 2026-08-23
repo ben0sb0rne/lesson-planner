@@ -388,6 +388,27 @@ re-import.
 
 ---
 
+## 8c. Colour is two axes, and they must not meet
+
+Two separate questions are being answered by colour, and confusing them makes the grid unreadable:
+
+- **Status — how ready is it?** A warm traffic light: Unplanned `#dc2626` → In Progress `#f97316`
+  → Waiting on Materials `#eab308` → Ready `#16a34a`.
+- **Tag — what is it?** The cool half: Test `#4338ca`, Quiz `#7c3aed`, Lab `#0d9488`,
+  Project `#c026d3`, Review `#0284c7`, Field Trip `#db2777`.
+
+**Any tag added later has to stay cool, and any status has to stay warm.** The moment one crosses
+over, a glance can no longer tell "this is a test" from "this isn't ready". They already differ in
+shape — status is an outlined chip, tag is a filled pill — but shape alone doesn't survive
+peripheral vision, which is how a week grid is actually read.
+
+Status is also **horizon-bounded**. A lesson with nothing set reads *Unplanned* only between today
+and `state.planAhead` weeks out (default 2). Past lessons show nothing — you already taught them.
+Beyond the horizon, nothing — that isn't due yet. Without this, a fresh year is a wall of red that
+means nothing, and red stops meaning anything at all.
+
+---
+
 ## 9. Answered
 
 Recorded so they don't get relitigated.
