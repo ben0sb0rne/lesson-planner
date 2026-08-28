@@ -211,7 +211,14 @@ body.dragging *{cursor:grabbing!important}
 .hwline:hover::after{border-color:var(--accent); color:var(--accent)}
 .hwline:not([data-due])::after{opacity:.45}
 
-.duecell{display:flex; flex-direction:column; gap:4px; padding:0; overflow:visible}
+/* The wrapper carries the box; only the lower half is a real .cell, so that
+   keyboard navigation lands on the part you can actually type in. */
+.duecell{
+  display:flex; flex-direction:column; gap:4px; padding:0;
+  min-height:var(--rowh); background:var(--surface); border:1px solid var(--border);
+  border-radius:8px; font-size:13px;
+}
+.duecell:hover{border-color:var(--border-strong)}
 .duecell .inbound{
   display:flex; flex-direction:column; gap:3px; padding:6px 9px 5px;
   border-bottom:1px dashed var(--border-strong);
@@ -225,6 +232,7 @@ body.dragging *{cursor:grabbing!important}
   border:none; background:transparent; min-height:26px; flex:1;
   padding:5px 9px 7px; border-radius:0 0 8px 8px;
 }
+.duecell .own:hover{border:none}
 .duecell .own:focus{box-shadow:none; border:none}
 .duecell:focus-within{border-color:var(--accent);
   box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}
@@ -1037,8 +1045,9 @@ const findRow = (c, role) => c.rows.find(r => rowRole(r) === role) || null;
 
 /** Undefined means "auto": on when both rows are present by name. */
 function hwOn(c){
+  /* The flag only ever turns it off; presence of both rows is what turns it
+     on, so the toggle's On action adds whichever is missing. */
   if (c.homework === false) return false;
-  if (c.homework === true) return !!(findRow(c,'due') && findRow(c,'assigned'));
   return !!(findRow(c,'due') && findRow(c,'assigned'));
 }
 
@@ -1077,22 +1086,30 @@ function assignmentsIn(html){
  * "you can't delete the populated text" true by construction rather than by
  * enforcement.
  */
-function dueOn(c, date, dates){
-  if (!hwOn(c)) return [];
+/**
+ * Every assignment in the class, indexed by the date it lands on. One pass
+ * over the lessons, one HTML parse each — anything needing more than a single
+ * cell's worth must build this rather than calling dueOn in a loop, which is
+ * how a year export turned into a hundred thousand parses.
+ */
+function buildDueIndex(c, dates){
+  const map = new Map();
+  if (!hwOn(c)) return map;
   const src = findRow(c,'assigned');
-  if (!src) return [];
-  const out = [];
+  if (!src) return map;
   c.lessons.forEach((id, i) => {
     const l = state.lessons[id];
     if (!l) return;
     assignmentsIn(l.cells[src.id]).forEach(a => {
       const r = resolveDue(a.due, i, dates);
-      if (r && r.date === date)
-        out.push({ text:a.text, from: dates[i] || null, pinned:r.pinned });
+      if (!r || !r.date) return;
+      if (!map.has(r.date)) map.set(r.date, []);
+      map.get(r.date).push({ text:a.text, from: dates[i] || null, pinned:r.pinned });
     });
   });
-  return out;
+  return map;
 }
+
 
 function migrate(data){
   if (!data || !data.courses) return emptyState();
@@ -1580,6 +1597,7 @@ function renderWeek(stage){
   /* One index per render pass — meetingDates isn't memoised, and deriving
      due dates per cell would rebuild it dozens of times. */
   const hwAll = hwOn(c) ? meetingDates(c) : null;
+  const dueIdx = hwAll ? buildDueIndex(c, hwAll) : new Map();
 
   const grid = el('div','weekgrid');
   grid.style.setProperty('--rowh','66px');
@@ -1605,10 +1623,10 @@ function renderWeek(stage){
   /* Day columns */
   dates.forEach(date => {
     const hol = holidayOn(date);
-    if (hol) return grid.appendChild(offColumn(hol.reason, fmtShort(date), date, c, hwAll));
+    if (hol) return grid.appendChild(offColumn(hol.reason, fmtShort(date), date, c, dueIdx));
 
     if (isCancelled(c, date)){
-      const col = offColumn('No Class', fmtShort(date), date, c, hwAll);
+      const col = offColumn('No Class', fmtShort(date), date, c, dueIdx);
       const b = el('button','','Restore');
       b.onclick = () => restoreMeeting(c, date);
       col.firstChild.appendChild(b);
@@ -1616,9 +1634,9 @@ function renderWeek(stage){
     }
     const idx = idxByDate.get(date);
     if (idx === undefined)
-      return grid.appendChild(offColumn('No Class', fmtShort(date), date, c, hwAll));
+      return grid.appendChild(offColumn('No Class', fmtShort(date), date, c, dueIdx));
 
-    grid.appendChild(dayColumn(c, date, idx));
+    grid.appendChild(dayColumn(c, date, idx, hwAll, dueIdx));
   });
 
   stage.appendChild(grid);
@@ -1670,9 +1688,17 @@ function dueLabel(due, assignIdx, dates){
 
 /** Refresh every pill's rendered label. Display only — data-due is the truth. */
 function paintDuePills(cell, assignIdx, dates){
+  /* A bare text node can't carry an attribute, and innerHTML wouldn't
+     serialise one set on the cell itself — so give every line a real block.
+     Never while the cell has focus: rewrapping would move the caret. */
+  const focused = document.activeElement === cell || cell.contains(document.activeElement);
+  if (!focused && !cell.querySelector('li,div,p') && cell.textContent.trim()){
+    const d = document.createElement('div');
+    while (cell.firstChild) d.appendChild(cell.firstChild);
+    cell.appendChild(d);
+  }
   const blocks = [...cell.querySelectorAll('li,div,p')].filter(n => !n.querySelector('li,div,p'));
-  const nodes = blocks.length ? blocks : [cell];
-  nodes.forEach(n => {
+  blocks.forEach(n => {
     const txt = (n.textContent || '').trim();
     if (!txt){ n.removeAttribute('data-dueon'); n.classList.remove('hwline'); return; }
     n.classList.add('hwline');
@@ -1694,8 +1720,10 @@ function makeAssignedCell(c, lesson, rowId, idx, dates){
   cell.addEventListener('click', e => {
     const line = e.target.closest('.hwline');
     if (!line || !cell.contains(line)) return;
-    /* Only the pill, which sits at the right-hand end. */
-    if (e.clientX < line.getBoundingClientRect().right - 92) return;
+    /* The pill is a ::after, so measure what was actually drawn — a fixed
+       zone swallowed half of every line in a narrow column. */
+    const pw = parseFloat(getComputedStyle(line, '::after').width) || 60;
+    if (e.clientX < line.getBoundingClientRect().right - pw - 8) return;
     e.preventDefault();
     openDueMenu(e, c, lesson, rowId, line, idx, dates);
   });
@@ -1708,9 +1736,9 @@ function makeAssignedCell(c, lesson, rowId, idx, dates){
  * makeCell serializes innerHTML wholesale, and anything inside would become
  * real text on the next keystroke.
  */
-function makeDueCell(c, lesson, rowId, date, dates){
-  const wrap = el('div','cell duecell');
-  const inbound = dueOn(c, date, dates);
+function makeDueCell(lesson, rowId, date, dueIdx){
+  const wrap = el('div','duecell');
+  const inbound = dueIdx.get(date) || [];
   if (inbound.length){
     const box = el('div','inbound');
     inbound.forEach(a => {
@@ -1723,9 +1751,9 @@ function makeDueCell(c, lesson, rowId, date, dates){
     });
     wrap.appendChild(box);
   }
-  const own = makeCell(lesson, rowId, 'own');
-  own.dataset.row = rowId;
-  wrap.appendChild(own);
+  /* Both classes: `cell` so keyboard navigation finds it, `own` so the
+     duecell styling can strip the box back off. */
+  wrap.appendChild(makeCell(lesson, rowId, 'cell own'));
   return wrap;
 }
 
@@ -1733,12 +1761,13 @@ function makeDueCell(c, lesson, rowId, date, dates){
 function openDueMenu(e, c, lesson, rowId, line, idx, dates){
   const m = $('menu'); m.innerHTML = '';
   m.appendChild(el('div','sec','Due'));
-  const set = v => {
+  /* Inside the callback: commit snapshots before it runs, so mutating first
+     means undo restores the change it was supposed to revert. */
+  const set = v => commit(v === null ? 'Due date cleared' : 'Due date set', () => {
     if (v === null) line.removeAttribute('data-due');
     else line.setAttribute('data-due', v);
     lesson.cells[rowId] = line.closest('.cell').innerHTML;
-    commit(v === null ? 'Due date cleared' : 'Due date set', () => {});
-  };
+  });
   [[1,'Next class'],[2,'In 2 classes'],[3,'In 3 classes'],[5,'In 5 classes']].forEach(([n,label]) => {
     const r = resolveDue('+'+n, idx, dates);
     menuItem(m, label, () => set('+'+n), '', r && r.date ? fmtMed(r.date) : 'past the end');
@@ -1759,8 +1788,10 @@ function pickDueDate(line, from, set){
   inp.value = isPinned(line.getAttribute('data-due')) ? line.getAttribute('data-due') : (from || '');
   inp.style.cssText = 'position:fixed;left:-9999px;opacity:0';
   document.body.appendChild(inp);
-  inp.onchange = () => { if (inp.value) set(inp.value); inp.remove(); };
-  inp.onblur = () => setTimeout(() => inp.remove(), 300);
+  const kill = () => inp.remove();
+  inp.onchange = () => { if (inp.value) set(inp.value); kill(); };
+  inp.onblur = () => setTimeout(kill, 300);
+  setTimeout(kill, 60000);          /* dismissing the picker fires neither */
   if (inp.showPicker) { try { inp.showPicker(); return; } catch(err){} }
   /* No showPicker: put it on screen and let them use it directly. */
   inp.style.cssText = 'position:fixed;z-index:300;left:50%;top:40%;transform:translate(-50%,-50%)';
@@ -1807,10 +1838,10 @@ function makeTitle(lesson){
  * reads as "no class"; the one thing you'd still need remains readable, and
  * it's what gives a pinned off-day deadline somewhere to appear.
  */
-function offColumn(title, sub, date, c, dates){
+function offColumn(title, sub, date, c, dueIdx){
   const col = el('div','daycol offday' + (date && date === iso(new Date()) ? ' istoday' : ''));
   const rows = c ? rowsFor(c, date) : [];
-  const inbound = (c && dates && date) ? dueOn(c, date, dates) : [];
+  const inbound = (c && dueIdx && date) ? (dueIdx.get(date) || []) : [];
 
   if (!c || !inbound.length){
     /* -2, not -1: the last row belongs to the "+ Row" button. */
@@ -1924,7 +1955,7 @@ function openAddRowMenu(e, c, dates){
   placeMenu(e);
 }
 
-function dayColumn(c, date, idx){
+function dayColumn(c, date, idx, hwDates, dueIdx){
   const lesson = ensureLesson(c, idx);
   const col = el('div','daycol' + (date === iso(new Date()) ? ' istoday' : ''));
   /* header + one row per component; the + Row row belongs to the labels only */
@@ -1962,11 +1993,10 @@ function dayColumn(c, date, idx){
 
   col.appendChild(head);
 
-  const hwDates = hwOn(c) ? meetingDates(c) : null;
   rowsFor(c, date).forEach(r => {
     const role = hwDates && rowRole(r);
     const cell = role === 'assigned' ? makeAssignedCell(c, lesson, r.id, idx, hwDates)
-               : role === 'due'      ? makeDueCell(c, lesson, r.id, date, hwDates)
+               : role === 'due'      ? makeDueCell(lesson, r.id, date, dueIdx)
                : makeCell(lesson, r.id);
     cell.oncontextmenu = e => { e.preventDefault(); openCellMenu(e, c, idx, r); };
     col.appendChild(cell);
@@ -2252,12 +2282,13 @@ function renderDay(stage){
   wrap.appendChild(card);
 
   const hwDates = hwOn(c) ? meetingDates(c) : null;
+  const dueIdx = hwDates ? buildDueIndex(c, hwDates) : new Map();
   rowsFor(c, date).forEach(r => {
     const box = el('div','card');
     box.appendChild(el('div','lbl', r.label));
     const role = hwDates && rowRole(r);
     box.appendChild(role === 'assigned' ? makeAssignedCell(c, lesson, r.id, idx, hwDates)
-                  : role === 'due'      ? makeDueCell(c, lesson, r.id, date, hwDates)
+                  : role === 'due'      ? makeDueCell(lesson, r.id, date, dueIdx)
                   : makeCell(lesson, r.id));
     wrap.appendChild(box);
   });
@@ -2791,14 +2822,15 @@ document.addEventListener('click', e => {
 let panelPath = [];
 const courseById = id => state.courses.find(c => c.id === id) || null;
 
-/* Every pane the panel can show. `root:true` puts it on the settings list in
-   this object's own order, with `summary()` as the value on its right — the
-   root is meant to be readable, not just a set of doors. `standalone:true`
-   means it's a verb reached from the ⋯ menu, so no Back arrow and no row. */
+/* Every pane the panel can show. The settings root is composed by hand in
+   renderSettingsRoot rather than generated from this table — these entries
+   exist so a path segment can be resolved to a title and a renderer.
+   `summary()` is read only where a pane appears as a nav row (holidays,
+   saving); `standalone:true` marks a verb reached from the ⋯ menu, which gets
+   no Back arrow because it has no parent. */
 const PANES = {
   classes: {
     title: sub => sub[0] ? ((courseById(sub[0]) || {}).name || 'Class') : 'Classes',
-    summary: () => `${state.courses.length} class${state.courses.length === 1 ? '' : 'es'}`,
     render: renderClassesPane,
   },
   holidays: {
@@ -2875,6 +2907,7 @@ function repaintPane(){
      lands after this frame on macOS, so the very repaint that matters most
      (the drop's own) is the one that would otherwise be thrown away. */
   if (body.querySelector('.rowedit.dragging')) return retryPaneRepaint();
+  paneRetries = 0;
   const keep = captureFocus(body), top = body.scrollTop;
   body.innerHTML = '';
   paintPaneBody(body);
@@ -2923,7 +2956,14 @@ function schedulePaneRepaint(){
 /* A repaint that had to stand aside for a drag must come back, not evaporate.
    Losing it is how a reorder ends up committed to state and invisible on
    screen — the mutation is real, the DOM just never hears about it. */
+let paneRetries = 0;
 function retryPaneRepaint(){
+  /* A drag that never fired dragend leaves .dragging behind for good. Waiting
+     forever means the pane silently stops updating, so give up and paint. */
+  if (++paneRetries > 12){
+    paneRetries = 0;
+    document.querySelectorAll('.rowedit.dragging').forEach(n => n.classList.remove('dragging'));
+  }
   setTimeout(() => { paneDirty = false; schedulePaneRepaint(); }, 60);
 }
 
@@ -3893,6 +3933,7 @@ function sheetXml(c, days){
 
   const hwDates = hwOn(c) ? meetingDates(c) : null;
   const dueRow = hwDates && findRow(c,'due');
+  const dueIdx = hwDates ? buildDueIndex(c, hwDates) : new Map();
   const exportRows = c.rows.concat(
     (c.weekRows || []).filter(r => days.some(d => d.date >= r.from && d.date <= r.to)));
   exportRows.forEach(row => {
@@ -3901,7 +3942,7 @@ function sheetXml(c, days){
       if (!dueRow || row.id !== dueRow.id) return own;
       /* What arrives from other days is derived, so the export has to ask for
          it rather than read it out of the cell. */
-      const inbound = dueOn(c, days[i].date, hwDates).map(a => a.text);
+      const inbound = (dueIdx.get(days[i].date) || []).map(a => a.text);
       return inbound.concat(own ? [own] : []).join('\n');
     });
     const lines = texts.reduce((n,t) => Math.max(n, t ? t.split('\n').length : 1), 1);
@@ -4310,6 +4351,7 @@ function buildAiJson(from, to){
 
     classes: state.courses.map(c => {
       const dates = meetingDates(c);
+      const dueIdx = hwOn(c) ? buildDueIndex(c, dates) : new Map();
       const lessons = [];
       const overflow = [];
 
@@ -4322,7 +4364,7 @@ function buildAiJson(from, to){
         c.rows.forEach(r => {
           let text = htmlToText(l.cells[r.id]);
           if (date && hwOn(c) && rowRole(r) === 'due'){
-            const inbound = dueOn(c, date, dates).map(a => a.text);
+            const inbound = (dueIdx.get(date) || []).map(a => a.text);
             text = inbound.concat(text ? [text] : []).join('\n');
           }
           if (text) plan[r.label] = text;
