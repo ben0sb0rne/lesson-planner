@@ -82,6 +82,24 @@ wipe them.
 
 The ⋯ menu is six items with no sub-labels. Class tabs drag to reorder.
 
+### Homework, linked
+Each line in **Homework Assigned** carries a due date and turns up automatically in **Homework
+Due** on the day it lands. Relative dates ("next class") ride the ripple, so a snow day moves the
+homework with the lesson; a date picked from the calendar is pinned and stays put.
+
+The due date lives in the cell's own HTML rather than on the lesson, because duplicate-day and
+copy-to-class clone `cells` wholesale but enumerate lesson fields longhand — the HTML is the one
+place a new field survives both for free. What arrives in Homework Due is derived on every paint
+and never stored, which is what makes "you can type here, but you can't delete what came from
+elsewhere" true by construction.
+
+A day with no class keeps its stripes on every row **except** Homework Due, when something is
+actually due then — so a deadline that falls on a non-teaching day still has somewhere to appear.
+
+Both rows are defaults for new classes, identified by name, and governed by a **Homework tracking**
+toggle that restores either if it goes missing and disables the behaviour without touching a word
+of what you wrote.
+
 ### Shipping as a real tool
 Sample/filler data removed — it opens empty and walks you through adding your first class.
 Installable: manifest, icons and an offline service worker, attached only when hosted so the
