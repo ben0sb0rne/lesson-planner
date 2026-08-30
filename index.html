@@ -3814,24 +3814,43 @@ function renderClassList(g){
  */
 function seamAt(container, sel, e){
   const rows = [...container.querySelectorAll(sel)];
-  if (!rows.length) return { seam:0, node:null, before:true };
+  if (!rows.length) return { seam:0, y:null };
+  let seam = rows.length;
   for (let i = 0; i < rows.length; i++){
     const r = rows[i].getBoundingClientRect();
-    if (e.clientY < r.top + r.height / 2) return { seam:i, node:rows[i], before:true };
-    if (e.clientY <= r.bottom) return { seam:i + 1, node:rows[i], before:false };
+    if (e.clientY < r.top + r.height / 2){ seam = i; break; }
+    if (e.clientY <= r.bottom){ seam = i + 1; break; }
   }
-  const last = rows[rows.length - 1];
-  return { seam: rows.length, node: last, before:false };
+  return Object.assign({ seam }, seamGeometry(rows, seam));
 }
 
-function showSeam(node, before){
-  const c = $('dragCaret'), r = node.getBoundingClientRect();
+/** Where the caret actually goes: the middle of the gap, not a row's own
+    edge. Drawing it on the edge put the same seam at the bottom of the gap
+    when approached from above and the top of it when approached from below,
+    so it appeared to slide as the pointer crossed. */
+function seamGeometry(rows, seam){
+  const rect = i => rows[i].getBoundingClientRect();
+  const above = seam > 0 ? rect(seam - 1) : null;
+  const below = seam < rows.length ? rect(seam) : null;
+  /* Read the gap off the list rather than hard-coding it — the grid's labels
+     and the editor's rows space themselves differently. */
+  const gap = rows.length > 1 ? Math.max(0, rect(1).top - rect(0).bottom) : 8;
+  const y = above && below ? (above.bottom + below.top) / 2
+          : below          ? below.top - gap / 2
+                           : above.bottom + gap / 2;
+  const ref = below || above;
+  return { y, left: ref.left, width: ref.width };
+}
+
+function showSeam(t){
+  if (t.y == null) return;
+  const c = $('dragCaret');
   c.classList.add('horizontal');
   c.style.height = '';
   c.style.display = 'block';
-  c.style.left = r.left + 'px';
-  c.style.width = r.width + 'px';
-  c.style.top = ((before ? r.top : r.bottom) - 1.5) + 'px';
+  c.style.left = t.left + 'px';
+  c.style.width = t.width + 'px';
+  c.style.top = (t.y - 1.5) + 'px';        // the bar is 3px, so centre it on y
   c.style.opacity = '1';
   requestAnimationFrame(() => c.classList.add('slide'));
 }
@@ -3870,8 +3889,7 @@ function bindRowDropZone(container, sel, mime, onDrop){
   container.ondragover = e => {
     if (!e.dataTransfer.types.includes(mime)) return;
     e.preventDefault();
-    const t = seamAt(container, sel, e);
-    if (t.node) showSeam(t.node, t.before);
+    showSeam(seamAt(container, sel, e));
   };
   container.ondragleave = e => {
     if (!container.contains(e.relatedTarget)) hideSeam();
