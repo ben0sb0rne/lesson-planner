@@ -196,7 +196,7 @@ body.dragging *{cursor:grabbing!important}
 }
 .rowlabel:hover{border-color:var(--border-strong); color:var(--text)}
 .rowlabel.dragging{opacity:.4}
-.rowlabel.over{border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 22%,transparent)}
+
 .rowlabel .grip{color:var(--faint); font-size:13px; letter-spacing:-2px}
 /* A row that exists for one week only — dashed, so it reads as temporary. */
 .rowlabel.weekrow{border-style:dashed; cursor:default}
@@ -399,6 +399,17 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
 }
 #dragCaret::before{top:-1px; border-top:6px solid var(--accent)}
 #dragCaret::after{bottom:-1px; border-bottom:6px solid var(--accent)}
+/* Rows stack downward, so their seams are horizontal. Same element, turned:
+   JS sets width instead of height, and the caps point inward from the ends. */
+#dragCaret.horizontal{width:auto; height:3px}
+#dragCaret.horizontal.slide{transition:top .09s ease-out, opacity .09s}
+#dragCaret.horizontal::before,#dragCaret.horizontal::after{
+  top:50%; bottom:auto; left:auto; transform:translateY(-50%);
+  border-left:none; border-right:none;
+  border-top:5px solid transparent; border-bottom:5px solid transparent;
+}
+#dragCaret.horizontal::before{left:-1px; border-left:6px solid var(--accent)}
+#dragCaret.horizontal::after{right:-1px; border-right:6px solid var(--accent)}
 #dragGhost{
   position:fixed; pointer-events:none; z-index:201; opacity:.85; display:none;
   transform:rotate(-1.2deg); box-shadow:0 8px 24px rgba(0,0,0,.22);
@@ -662,17 +673,34 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:70;display:none}
 .scrim.on{display:block}
 .panel{
-  position:fixed; top:0; right:0; bottom:0; width:min(460px,94vw); background:var(--surface);
-  border-left:1px solid var(--border); z-index:75; padding:20px 20px 0; overflow:hidden;
-  display:none; flex-direction:column; gap:14px;
+  position:fixed; top:0; right:0; bottom:0; width:min(640px,96vw); background:var(--surface);
+  border-left:1px solid var(--border); z-index:75; padding:20px 0 0; overflow:hidden;
+  display:none; flex-direction:column; gap:12px;
 }
 .panel.on{display:flex}
 /* The header stays put so Back and Close never scroll away; only the body moves. */
-.panelhd{display:flex; align-items:center; gap:10px; flex:0 0 auto}
+.panelhd{display:flex; align-items:center; gap:10px; flex:0 0 auto; padding:0 20px}
+.panelbanner{margin:0 20px; flex:0 0 auto}
+/* Rail beside body. Settings outgrew one scrolling column — five sections,
+   each of which now fits without scrolling. */
+.panelwrap{display:flex; flex:1; min-height:0; gap:0}
+.panelwrap.full{display:block; overflow:auto}
+.panerail{
+  width:132px; flex:0 0 auto; padding:4px 8px 20px 14px; display:flex;
+  flex-direction:column; gap:1px; overflow:auto;
+}
+.railitem{
+  text-align:left; padding:7px 10px; border-radius:7px; font-size:13px;
+  color:var(--muted); white-space:nowrap;
+}
+.railitem:hover{background:var(--surface-2); color:var(--text)}
+.railitem.on{background:color-mix(in srgb,var(--accent) 13%,transparent); color:var(--accent);
+  font-weight:600}
 .panebody{
   flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column;
-  gap:18px; padding-bottom:20px;
+  gap:16px; padding:0 20px 20px; min-width:0;
 }
+.panelwrap.full .panebody{overflow:visible; padding-top:0}
 .backbtn{
   display:flex; align-items:center; gap:5px; margin-left:-6px; padding:4px 8px;
   border-radius:7px; color:var(--muted); font-size:13px; font-weight:560; white-space:nowrap;
@@ -681,7 +709,8 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
 .navlist{display:flex; flex-direction:column; gap:2px}
 .navrow{
   display:flex; align-items:center; gap:10px; width:100%; text-align:left;
-  padding:11px 10px; border-radius:9px; font-size:14px; font-weight:560;
+  padding:10px 12px; border-radius:9px; font-size:13px; font-weight:450;
+  border:1px solid var(--border);
 }
 .navrow:hover{background:var(--surface-2)}
 .navrow .v{
@@ -693,12 +722,21 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
 .panel h3{margin:0; font-size:16px; letter-spacing:-.01em}
 .panel h4{margin:0; font-size:13px; letter-spacing:-.01em}
 .panel .grp{display:flex; flex-direction:column; gap:8px}
-.panel .grp>label{font-size:11px;font-weight:700;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.07em}
-/* A group inside a section is a sub-heading, not a peer of it. */
-.panel .grp .grp>label{font-size:11px;font-weight:600;color:var(--faint);
-  text-transform:none;letter-spacing:0}
+/* A label used to be 11px uppercase muted while the rows under it were 14px
+   semibold — so "Holidays" read louder than the section it sat in. The label
+   outranks its contents now, and every control has one. */
+.panel .grp>label{font-size:13px; font-weight:600; color:var(--text);
+  text-transform:none; letter-spacing:0}
+.panel .grp .grp>label{font-size:12.5px; font-weight:600; color:var(--muted)}
 .panel .grp .grp{gap:6px}
+/* A labelled block, so a control and the words naming it read as one object
+   instead of two things that happen to be adjacent. */
+.panel .card{
+  display:flex; flex-direction:column; gap:8px; padding:11px 13px;
+  border:1px solid var(--border); border-radius:9px;
+}
+.panel .card>label{font-size:13px; font-weight:600; color:var(--text)}
+.panel .card .note{margin-top:-2px}
 .panel input[type=text],.panel input[type=date],.panel input[type=number]{
   padding:7px 10px; border:1px solid var(--border); border-radius:7px;
   background:var(--bg); outline:none; width:100%;
@@ -720,7 +758,7 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
 .clslist{display:flex; flex-direction:column; gap:4px}
 .clsitem{
   display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:8px;
-  border:1px solid var(--border); font-size:13.5px; font-weight:560; cursor:pointer;
+  border:1px solid var(--border); font-size:13px; font-weight:500; cursor:pointer;
 }
 .clsitem:hover{background:var(--surface-2)}
 .clsitem.on{border-color:var(--c); background:color-mix(in srgb,var(--c) 8%,transparent)}
@@ -734,7 +772,6 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
 .rowedit{display:flex; align-items:center; gap:8px; padding:6px 8px;
   border:1px solid var(--border); border-radius:7px; font-size:13px; cursor:grab}
 .rowedit.dragging{opacity:.4}
-.rowedit.over{border-color:var(--accent)}
 .rowedit .grip{color:var(--faint); letter-spacing:-2px; font-size:12px}
 .rowedit .txt{flex:1; outline:none}
 .rowedit .x{color:var(--faint); font-size:15px}
@@ -757,11 +794,15 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
   font-size:12.5px;font-weight:600;color:var(--muted); white-space:nowrap}
 .addrow button:hover{background:var(--surface-2);color:var(--text)}
 
-.helprow{display:flex; gap:12px; align-items:baseline; padding:5px 0; font-size:13px}
-.helprow .g{
-  flex:0 0 150px; font-weight:620; font-size:12px; color:var(--text);
-}
+/* Two columns in the widened panel, so the whole thing is readable without
+   scrolling. Narrow columns need the term stacked over its definition — a
+   150px label beside 150px of text is unreadable either way round. */
+.helpcols{display:grid; grid-template-columns:1fr 1fr; gap:0 22px; align-items:start}
+.helpcols>.grp{gap:14px}
+.helprow{padding:5px 0; font-size:13px}
+.helprow .g{font-weight:620; font-size:12px; color:var(--text); margin-bottom:1px}
 .helprow .d{color:var(--muted); font-size:12.5px; line-height:1.45}
+@media (max-width:700px){ .helpcols{grid-template-columns:1fr} }
 kbd{
   font:inherit; font-size:11px; font-weight:650; padding:1.5px 5px; border-radius:4px;
   border:1px solid var(--border-strong); background:var(--surface-2); color:var(--text);
@@ -798,12 +839,13 @@ kbd{
 .searchbox{
   position:relative; display:flex; align-items:center; gap:7px; height:32px;
   width:260px; padding:0 9px; border-radius:8px; background:var(--surface-2);
-  border:1px solid transparent; transition:border-color .12s, background .12s;
+  border:1px solid transparent;
+  transition:width .14s ease, border-color .12s, background .12s;
 }
-/* One width. It used to grow 210→300px on focus, which slid everything to its
-   left by 45px on every ⌘K — and will shove a grid-centred row once the bar is
-   one. Only the surface changes now. */
-.searchbox:focus-within{background:var(--surface); border-color:var(--accent)}
+/* Growing on focus used to slide the view switcher 45px sideways, because the
+   bar was two flex spacers. It's a 1fr auto 1fr grid now, which absorbs the
+   change — measured at 0px drift up to 560px — so the room is free. */
+.searchbox:focus-within{width:380px; background:var(--surface); border-color:var(--accent)}
 .searchbox .si{width:15px; height:15px; fill:none; stroke:var(--faint);
   stroke-width:1.9; stroke-linecap:round; flex:0 0 auto}
 .searchbox input{
@@ -819,7 +861,9 @@ body.hints .segmented .hint,body.hints #today .hint{
   display:inline-block; margin-left:5px; font-size:9px; opacity:.6; padding:0 3px;
 }
 .searchbox .hits{
-  position:absolute; top:38px; right:0; width:min(560px,78vw); max-height:62vh;
+  /* Stretched across the BORDER box. width:100% would resolve against the
+     padding box and leave the panel 2px narrow and 1px off. */
+  position:absolute; top:38px; left:-1px; right:-1px; max-height:62vh;
   overflow:auto; padding:5px; display:none; z-index:78;
   background:var(--surface); border:1px solid var(--border-strong);
   border-radius:11px; box-shadow:var(--shadow);
@@ -842,29 +886,34 @@ body.hints .segmented .hint,body.hints #today .hint{
    than the row holding still. */
 @media (max-width:1040px){
   .searchbox{width:190px}
+  .searchbox:focus-within{width:320px}
   .searchbox .hint{display:none}
 }
 @media (max-width:820px){
   .searchbox{width:34px; padding:0 8px}
   .searchbox input{opacity:0; transition:opacity .12s}
-  .searchbox:focus-within{width:220px}
+  .searchbox:focus-within{width:min(260px,72vw)}
   .searchbox:focus-within input{opacity:1}
 }
+/* Two lines. Four things on one line meant the snippet — the part that tells
+   you whether it's the right lesson — was always the one cut off. */
 .searchbox .hit{
-  display:flex; align-items:baseline; gap:9px; padding:8px 11px; border-radius:8px;
+  display:flex; flex-direction:column; gap:2px; padding:7px 10px; border-radius:8px;
   cursor:pointer; font-size:13px;
 }
 .searchbox .hit.on,.searchbox .hit:hover{background:var(--surface-2)}
+.searchbox .hit .top{display:flex; align-items:center; gap:7px; min-width:0}
 .searchbox .hit .mc{
   width:17px; height:15px; border-radius:4px; background:var(--c); color:#fff;
   font-size:9.5px; font-weight:800; display:grid; place-items:center; flex:0 0 auto;
 }
-.searchbox .hit .d{color:var(--faint); font-size:11.5px; white-space:nowrap;
-  font-variant-numeric:tabular-nums}
-.searchbox .hit .t{font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  max-width:40%}
-.searchbox .hit .s{color:var(--muted); font-size:12px; flex:1; min-width:0;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.searchbox .hit .d{margin-left:auto; color:var(--faint); font-size:11.5px; white-space:nowrap;
+  flex:0 0 auto; font-variant-numeric:tabular-nums}
+.searchbox .hit .t{font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.searchbox .hit .s{
+  color:var(--muted); font-size:12px; line-height:1.4; overflow:hidden;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+}
 .searchbox .hit mark{background:color-mix(in srgb,var(--accent) 28%,transparent);
   color:inherit; border-radius:2px}
 .searchbox .none{padding:22px 16px; text-align:center; color:var(--faint); font-size:13px}
@@ -1104,14 +1153,24 @@ function spreadTerms(yearStart, yearEnd, n){
 
 const termsFor = c => (c && c.terms) ? c.terms : state.terms;
 
-/** Which term a date falls in: { index, start, mode, count } */
+/** Which term a date falls in: { index, start, end, mode, count }
+    Null outside the school year. Without that bound the last term ran
+    forever — the date picker would report "Trimester 3 · Week 97" for a date
+    in 2029, because every date after the last start belonged to it. */
 function termOn(date, c){
+  if (date < state.yearStart || date > state.yearEnd) return null;
   const t = termsFor(c);
   if (!t || !t.starts || !t.starts.length) return null;
   let i = 0;
   t.starts.forEach((s,k) => { if (date >= s) i = k; });
-  return { index:i, start:t.starts[i], mode:t.mode, count:t.starts.length };
+  return { index:i, start:t.starts[i], end: termEndAt(t, i),
+           mode:t.mode, count:t.starts.length };
 }
+
+/** Terms are contiguous, so one ends the day before the next begins and the
+    last ends with the year. Nothing new is stored. */
+const termEndAt = (t, i) =>
+  i + 1 < t.starts.length ? addDays(t.starts[i + 1], -1) : state.yearEnd;
 
 const termAbbr = t =>
   t && t.count > 1 && TERM_MODES[t.mode] && TERM_MODES[t.mode].abbr
@@ -1123,11 +1182,48 @@ const termLong = t =>
   t && t.count > 1 && TERM_MODES[t.mode] && TERM_MODES[t.mode].long
     ? TERM_MODES[t.mode].long + ' ' + (t.index + 1) : '';
 
+const weekCount = () => state.weekCount || { from:'term', skipEmpty:true };
+
+/* Weeks that contain at least one teaching day, in order. A fortnight of
+   Christmas holiday consumes two week numbers otherwise, which is not how
+   schools count. Memoised on the same inputs as schoolDays, plus the weekend
+   setting, since a Saturday-only week counts only if Saturdays are shown. */
+let _weekIdx = null, _weekIdxKey = '';
+function weekIndex(){
+  const key = state.yearStart + '|' + state.yearEnd + '|' +
+              JSON.stringify(state.holidays) + '|' + visibleDows().join('');
+  if (_weekIdx && _weekIdxKey === key) return _weekIdx;
+  const list = [], at = new Map();
+  const dows = visibleDows();
+  schoolDays().forEach(d => {
+    if (!dows.includes(dow(d))) return;
+    const w = weekStart(d);
+    if (at.has(w)) return;
+    at.set(w, list.length);
+    list.push(w);
+  });
+  _weekIdx = { list, at }; _weekIdxKey = key;
+  return _weekIdx;
+}
+
 /** "Week 3 · S1", or just "Week 3" when the year isn't divided. */
 function weekLabel(date, c){
   const t = termOn(date, c);
   if (!t) return '';
-  const n = Math.floor(dayDiff(weekStart(date), weekStart(t.start)) / 7) + 1;
+  const wc = weekCount();
+  const origin = wc.from === 'year' ? state.yearStart : t.start;
+  let n;
+  if (wc.skipEmpty){
+    const wi = weekIndex();
+    const bi = wi.at.get(weekStart(date));
+    if (bi === undefined) return '';        // nothing is taught this week
+    const ow = weekStart(origin);
+    let ai = wi.at.get(ow);
+    if (ai === undefined) ai = wi.list.findIndex(w => w >= ow);
+    n = bi - (ai < 0 ? 0 : ai) + 1;
+  } else {
+    n = Math.floor(dayDiff(weekStart(date), weekStart(origin)) / 7) + 1;
+  }
   if (n < 1) return '';
   const abbr = termAbbr(t);
   return abbr ? `Week ${n} · ${abbr}` : `Week ${n}`;
@@ -1142,9 +1238,10 @@ const mkRows = labels => labels.map(l => ({ id:uid(), label:l }));
 function emptyState(){
   const yearStart = '2026-08-24', yearEnd = '2027-06-04';
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     yearStart, yearEnd,
     archives: [],
+    weekCount: { from:'term', skipEmpty:true },
     terms: { mode:'semester', starts: spreadTerms(yearStart, yearEnd, 2) },
     holidays: [],
     courses: [],
@@ -1168,7 +1265,8 @@ function load(){
 }
 
 /** Bring older files forward.
-    v1 = rotating cycle · v2 = weekdays · v3 = terms · v4 = archived years. */
+    v1 = rotating cycle · v2 = weekdays · v3 = terms · v4 = archived years ·
+    v5 = week-numbering options. */
 /** Rows this class shows only during a given calendar week. Pinned to dates,
     not to lesson positions — so nothing in the ripple engine has to know they
     exist, and inserting a day earlier leaves them on the week they were made
@@ -1333,6 +1431,13 @@ function migrate(data){
   if (at() < 4){
     data.archives = data.archives || [];
     data.schemaVersion = 4;
+  }
+  if (at() < 5){
+    /* skipEmpty on by default: not counting a week that is entirely holiday is
+       the common school convention, and it renumbers an existing year the
+       first time it opens — a display change only, nothing moves. */
+    data.weekCount = data.weekCount || { from:'term', skipEmpty:true };
+    data.schemaVersion = 5;
   }
   return data;
 }
@@ -1523,7 +1628,7 @@ function schoolDays(){
   _schoolDays = out; _schoolKey = key;
   return out;
 }
-const invalidateSchedule = () => { _schoolDays = null; };
+const invalidateSchedule = () => { _schoolDays = null; _weekIdx = null; };
 
 const isCancelled = (course, date) => course.cancelled.some(x => x.date === date);
 
@@ -1755,6 +1860,7 @@ function renameTab(span, c){
   const before = c.name;
   span.contentEditable = 'true';
   span.spellcheck = false;
+  plainPasteOn(span, false);
 
   const swallow = e => { if (span.isContentEditable) e.stopPropagation(); };
   span.onmousedown = swallow;
@@ -1885,6 +1991,8 @@ function renderWeek(stage){
 
   /* Row labels */
   const labels = el('div','rowlabels');
+  bindRowDropZone(labels, '.rowlabel:not(.weekrow)', 'text/row',
+                  (from, to) => dropRow(c, from, to));
   labels.appendChild(el('div','rl-spacer'));
   c.rows.forEach((r,ri) => labels.appendChild(rowLabel(c, r, ri)));
   weekRows.forEach(r => labels.appendChild(weekRowLabel(c, r)));
@@ -1922,31 +2030,61 @@ function renderWeek(stage){
    handful of tags the toolbar can actually produce; unwrap everything else.
    ─────────────────────────────────────────────────────────────────────── */
 
-const PASTE_KEEP = new Set(['B','STRONG','I','EM','U','UL','OL','LI','BR','P','DIV']);
-/* Everything else is stripped, but a checklist's shape lives in these two —
-   the class marks the list, the attribute holds the tick. */
-const PASTE_KEEP_ATTR = { UL:['class'], LI:['data-c','data-due'],
-                          DIV:['data-due'], P:['data-due'] };
-const PASTE_DROP = new Set(['SCRIPT','STYLE','HEAD','TITLE','META','LINK']);
+/* A leading bullet or number that came through as literal text. Slides paste
+   "\u2022 Lab safety" as characters, not as a list. */
+const PASTE_BULLET = /^\s*(?:[\u2022\u00b7\u25aa\u25e6\u2023\u2219*\u2043-]|\d+[.)])\s+/;
 
-function cleanPaste(html){
-  const box = document.createElement('div');
-  box.innerHTML = html;                       // innerHTML never runs scripts
-  box.querySelectorAll([...PASTE_DROP].join(',')).forEach(n => n.remove());
-  /* Static list, walked in document order — unwrapped children stay in it
-     and still get visited, so nested junk is stripped too. */
-  box.querySelectorAll('*').forEach(n => {
-    if (!PASTE_KEEP.has(n.tagName)) return n.replaceWith(...n.childNodes);
-    const keep = PASTE_KEEP_ATTR[n.tagName] || [];
-    [...n.attributes].forEach(a => {
-      if (!keep.includes(a.name)) return n.removeAttribute(a.name);
-      if (a.name === 'class' && a.value !== 'cl' && a.value !== 'hw') n.removeAttribute('class');
-      if (a.name === 'data-c' && a.value !== '1') n.removeAttribute('data-c');
-      if (a.name === 'data-due' && !isPinned(a.value) && !isRelative(a.value) && !isDays(a.value))
-        n.removeAttribute('data-due');
+/**
+ * What a paste is allowed to bring with it: the words, and the line breaks.
+ *
+ * Keeping a safe subset of tags never kept up with what Word and PowerPoint
+ * invent — fonts, sizes, colours and inline styles arrived wearing tags that
+ * were on the list, and wrecked the grid's typography. So nothing formatted
+ * survives at all. The toolbar is how text gets styled, afterwards.
+ */
+function pasteLines(html, plain){
+  let text;
+  if (plain && plain.trim()) text = plain;
+  else {
+    const box = document.createElement('div');
+    box.innerHTML = html || '';               // innerHTML never runs scripts
+    box.querySelectorAll('script,style,head,title,meta,link').forEach(n => n.remove());
+    /* Mark the block boundaries before textContent flattens them away. */
+    box.querySelectorAll('br').forEach(n => n.replaceWith('\n'));
+    /* Cells are columns, not lines — separate them, but keep the row on one. */
+    box.querySelectorAll('td,th').forEach(n => n.append(' '));
+    box.querySelectorAll('p,div,li,tr,h1,h2,h3,h4,h5,h6').forEach(n => {
+      n.prepend('\n'); n.append('\n');
     });
+    text = box.textContent || '';
+  }
+  return text
+    .replace(/\u00a0/g, ' ')                   // slides are full of these
+    .split('\n')
+    .map(line => line.replace(/\s+/g, ' ').replace(PASTE_BULLET, '').trim())
+    .filter(Boolean);
+}
+
+/**
+ * Paste plain text into any editable surface.
+ * @param multiline false for one-line fields (a title, a row name), where
+ *   pasted lines join with a space rather than becoming separate blocks.
+ */
+function plainPasteOn(node, multiline){
+  node.addEventListener('paste', e => {
+    e.preventDefault();
+    const cd = e.clipboardData;
+    if (!cd) return;
+    const lines = pasteLines(cd.getData('text/html'), cd.getData('text/plain'));
+    if (!lines.length) return;
+    /* insertText for a single line so a paste mid-sentence stays in that
+       sentence — inserting a block there would split the line in two. */
+    if (!multiline || lines.length === 1)
+      return document.execCommand('insertText', false,
+        multiline ? lines[0] : lines.join(' '));
+    document.execCommand('insertHTML', false,
+      lines.map(l => `<div>${escapeHtml(l)}</div>`).join(''));
   });
-  return box.innerHTML;
 }
 const escapeHtml = s => s.replace(/[&<>]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[ch]));
 
@@ -2166,13 +2304,7 @@ function makeCell(lesson, rowId, cls){
   cell.oninput = () => { lesson.cells[rowId] = cell.innerHTML; save(); };
   cell.onfocus = () => showFmt(cell);
   cell.onblur  = () => hideFmt();
-  cell.addEventListener('paste', e => {
-    e.preventDefault();
-    const cd = e.clipboardData;
-    const html = cd.getData('text/html');
-    document.execCommand('insertHTML', false,
-      html ? cleanPaste(html) : escapeHtml(cd.getData('text/plain')).replace(/\n/g,'<br>'));
-  });
+  plainPasteOn(cell, true);
   bindEditable(cell, () => cell.innerHTML, v => setCell(lesson.id, rowId, v), 'Cell edited');
   return cell;
 }
@@ -2188,6 +2320,7 @@ function makeTitle(lesson){
   /* One line of meaning, however many lines of screen — Enter leaves rather
      than starting a paragraph. */
   title.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); title.blur(); } };
+  plainPasteOn(title, false);
   bindEditable(title, () => title.textContent, v => setTitle(lesson.id, v), 'Concept edited');
   return title;
 }
@@ -2244,7 +2377,6 @@ function offColumn(title, sub, date, c, dueIdx){
 
 function rowLabel(c, r, ri){
   const rl = el('div','rowlabel');
-  rl.draggable = true;
   rl.appendChild(el('span','grip','⋮⋮'));
   const txt = el('span','txt', r.label);
   txt.contentEditable = 'true';
@@ -2255,6 +2387,7 @@ function rowLabel(c, r, ri){
     else txt.textContent = r.label;
   };
   txt.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); txt.blur(); } };
+  plainPasteOn(txt, false);
   rl.appendChild(txt);
   const x = el('button','x','×');
   x.title = 'Delete row';
@@ -2264,26 +2397,7 @@ function rowLabel(c, r, ri){
   };
   rl.appendChild(x);
 
-  rl.ondragstart = e => {
-    e.dataTransfer.setData('text/row', String(ri));
-    e.dataTransfer.effectAllowed = 'move';
-    rl.classList.add('dragging');
-  };
-  rl.ondragend   = () => rl.classList.remove('dragging');
-  rl.ondragover  = e => {
-    if (!e.dataTransfer.types.includes('text/row')) return;
-    e.preventDefault(); rl.classList.add('over');
-  };
-  rl.ondragleave = () => rl.classList.remove('over');
-  rl.ondrop = e => {
-    e.preventDefault(); rl.classList.remove('over');
-    const from = Number(e.dataTransfer.getData('text/row'));
-    if (from === ri) return;
-    commit('Reordered rows', () => {
-      const [m] = c.rows.splice(from,1);
-      c.rows.splice(ri,0,m);
-    });
-  };
+  bindRowDrag(rl, txt, ri, 'text/row');
   return rl;
 }
 
@@ -2519,6 +2633,8 @@ function resolveTarget(x, prev, cols){
 
 function paintDrag(x, y, cols){
   const ghost = $('dragGhost'), caret = $('dragCaret'), label = $('dragLabel');
+  caret.classList.remove('horizontal');
+  caret.style.width = '';
   ghost.style.left = (x - Number(ghost.dataset.dx)) + 'px';
   ghost.style.top  = (y - Number(ghost.dataset.dy)) + 'px';
 
@@ -3280,44 +3396,79 @@ let panelPath = [];
 const courseById = id => state.courses.find(c => c.id === id) || null;
 
 /* Every pane the panel can show. The settings root is composed by hand in
-   renderSettingsRoot rather than generated from this table — these entries
+   the section renderers rather than generated from this table — these entries
    exist so a path segment can be resolved to a title and a renderer.
    `summary()` is read only where a pane appears as a nav row (holidays,
    saving); `standalone:true` marks a verb reached from the ⋯ menu, which gets
    no Back arrow because it has no parent. */
+/* The rail. `tab` on a pane says which rail item lights up for it, so a
+   sub-pane like Holidays keeps its section highlighted and knows where Back
+   goes. Panes without a `tab` are standalone verbs from the ⋯ menu. */
+const TABS = [
+  ['classes',  'Classes'],
+  ['calendar', 'Calendar'],
+  ['display',  'Display'],
+  ['saving',   'Saving'],
+  ['advanced', 'Advanced'],
+];
+
 const PANES = {
   classes: {
+    tab:'classes',
     title: sub => sub[0] ? ((courseById(sub[0]) || {}).name || 'Class') : 'Classes',
     render: renderClassesPane,
   },
+  calendar: { tab:'calendar', title:'Calendar', render: renderCalendarPane },
   holidays: {
+    tab:'calendar',
     title: 'Holidays',
     summary: () => state.holidays.length
       ? `${state.holidays.length} break${state.holidays.length === 1 ? '' : 's'}` : 'None',
     render: renderHolidaysPane,
   },
-  saving: { title: 'Saving', summary: () => savingSummary(), render: renderStoragePane },
+  display: { tab:'display', title:'Display', render: renderDisplayPane },
+  saving: { tab:'saving', title: 'Saving', summary: () => savingSummary(), render: renderStoragePane },
+  advanced: { tab:'advanced', title:'Advanced', render: renderAdvancedPane },
+  rollover: { tab:'advanced', title:'Start a new school year',
+              summary: () => yearLabel(state.yearStart, state.yearEnd),
+              render: renderRolloverPane },
   help:   { title:'Help & shortcuts', standalone:true, render: renderHelp },
   export: { title:'Export to Excel',  standalone:true, render: renderExportPanel },
   ai:     { title:'Export for AI',    standalone:true, render: renderAiPanel },
-  rollover: { title:'Start a new school year',
-              summary: () => yearLabel(state.yearStart, state.yearEnd),
-              render: renderRolloverPane },
 };
+
+const DEFAULT_TAB = 'classes';        // what Settings opens on, and what it opens most
 
 const panelIsOpen = () => $('panel').classList.contains('on');
 
 function openPanel(path){
-  panelPath = path == null ? [] : Array.isArray(path) ? path.slice() : [path];
+  panelPath = path == null ? [DEFAULT_TAB]
+            : Array.isArray(path) ? path.slice() : [path];
+  if (!panelPath.length) panelPath = [DEFAULT_TAB];
   $('scrim').classList.add('on');
   $('panel').classList.add('on');
   paintPanel();
 }
 function panelGoto(...seg){ panelPath = seg; paintPanel(); }
-function panelBack(){ panelPath.pop(); paintPanel(); }
+
+/** Back leaves a sub-pane for its own section, not for a root that no longer
+    exists — the rail is the root now. */
+function panelBack(){
+  if (panelPath.length > 1) panelPath.pop();
+  else {
+    const pane = PANES[panelPath[0]];
+    panelPath = [pane && pane.tab ? pane.tab : DEFAULT_TAB];
+  }
+  paintPanel();
+}
+
+/** True when the current pane is a rail section rather than one level in. */
+function atTabRoot(){
+  const pane = PANES[panelPath[0]];
+  return panelPath.length === 1 && pane && pane.tab === panelPath[0];
+}
 
 function paneTitle(){
-  if (!panelPath.length) return 'Settings';
   const pane = PANES[panelPath[0]];
   if (!pane) return 'Settings';
   return typeof pane.title === 'function' ? pane.title(panelPath.slice(1)) : pane.title;
@@ -3327,14 +3478,14 @@ function panelHeader(){
   const hd = el('div','panelhd');
   const pane = PANES[panelPath[0]];
   const standalone = pane && pane.standalone && panelPath.length === 1;
-  if (panelPath.length && !standalone){
+  if (!standalone && !atTabRoot()){
     const b = el('button','backbtn');
     b.appendChild(el('span','chev','‹'));
     /* Going back drops the last segment, so the label is this pane's title
        evaluated one level shallower — not the raw title, which may be a fn. */
     const parent = panelPath.length > 1
       ? (typeof pane.title === 'function' ? pane.title(panelPath.slice(1, -1)) : pane.title)
-      : 'Settings';
+      : ((TABS.find(t => t[0] === (pane && pane.tab)) || [,'Settings'])[1]);
     b.appendChild(el('span','', parent));
     b.onclick = panelBack;
     hd.appendChild(b);
@@ -3351,9 +3502,33 @@ function panelHeader(){
 function paintPanel(){
   const p = $('panel'); p.innerHTML = '';
   p.appendChild(panelHeader());
+  const pane = PANES[panelPath[0]];
+  const standalone = pane && pane.standalone;
+
+  /* Above the rail, not inside a section — an unbacked-up user should meet it
+     whichever section they opened. */
+  if (!standalone){
+    const banner = storageBanner();
+    if (banner){ banner.classList.add('panelbanner'); p.appendChild(banner); }
+  }
+
+  const wrap = el('div','panelwrap' + (standalone ? ' full' : ''));
+  if (!standalone) wrap.appendChild(panelRail());
   const body = el('div','panebody');
-  p.appendChild(body);
+  wrap.appendChild(body);
+  p.appendChild(wrap);
   paintPaneBody(body);
+}
+
+function panelRail(){
+  const rail = el('div','panerail');
+  const cur = (PANES[panelPath[0]] || {}).tab;
+  TABS.forEach(([k, label]) => {
+    const b = el('button','railitem' + (k === cur ? ' on' : ''), label);
+    b.onclick = () => panelGoto(k);
+    rail.appendChild(b);
+  });
+  return rail;
 }
 
 /** Body only, so the header, the scroll position and the focused control all
@@ -3394,9 +3569,9 @@ function refreshPanelTitle(){
 }
 
 function paintPaneBody(body){
-  if (!panelPath.length) return renderSettingsRoot(body);
-  const pane = PANES[panelPath[0]];
-  if (!pane){ panelPath = []; return renderSettingsRoot(body); }
+  if (!panelPath.length) panelPath = [DEFAULT_TAB];
+  let pane = PANES[panelPath[0]];
+  if (!pane){ panelPath = [DEFAULT_TAB]; pane = PANES[DEFAULT_TAB]; }
   /* Undo can replace state wholesale and orphan a course id in the path. */
   if (panelPath[0] === 'classes' && panelPath[1] && !courseById(panelPath[1]))
     panelPath = ['classes'];
@@ -3472,48 +3647,71 @@ function setCaret(node, at){
 let holidayDraft = { date:'', endDate:'', reason:'' };
 let rowDraft = '';
 
-function renderSettingsRoot(body){
-  const banner = storageBanner();
-  if (banner) body.appendChild(banner);
+/** A labelled block. Every control gets one — the shortcut-hints toggle used
+    to sit under nothing at all, with only a note beneath to explain it. */
+function card(box, label, note){
+  const c = el('div','card');
+  c.appendChild(el('label','', label));
+  box.appendChild(c);
+  if (note) c.dataset.note = note;
+  return c;
+}
 
-  /* Classes are the thing opened most, so they're never behind a door. */
-  const cg = el('div','grp');
-  cg.appendChild(el('label','','Classes'));
-  renderClassList(cg);
-  body.appendChild(cg);
-
-  /* One block for everything calendar-shaped. Holidays is the only list that
-     grows without bound, so it's the only one that gets a page of its own. */
-  const kg = el('div','grp');
-  kg.appendChild(el('label','','Calendar'));
-  renderYearPane(kg);
-  renderTermsPane(kg);
-  renderWeekendsPane(kg);
-  renderPlanAhead(kg);
-  const hrow = navRow('holidays', 'Holidays', PANES.holidays.summary());
-  hrow.style.marginTop = '4px';
-  kg.appendChild(hrow);
-  kg.appendChild(navRow('rollover', 'Start a new school year',
-                        PANES.rollover.summary()));
-  body.appendChild(kg);
-
-  const ag = el('div','grp');
-  ag.appendChild(el('label','','Appearance'));
-  const arow = el('div','dayrow');
-  [[false,'Hide'],[true,'Show']].forEach(([v,lab]) => {
-    const chip = el('div','daychip' + (showHints() === v ? ' on' : ''), lab);
+/** Two chips that pick between two values. The shape three settings shared. */
+function choiceRow(box, opts, isOn, pick){
+  const row = el('div','dayrow');
+  opts.forEach(([v,lab]) => {
+    const chip = el('div','daychip' + (isOn(v) ? ' on' : ''), lab);
     chip.style.setProperty('--c','var(--accent)');
-    chip.onclick = () => { setHints(v); schedulePaneRepaint(); };
-    arow.appendChild(chip);
+    chip.onclick = () => pick(v);
+    row.appendChild(chip);
   });
-  ag.appendChild(arow);
-  ag.appendChild(el('div','note',
-    `Shortcut hints on the buttons themselves — ${MODG}K on search, 1/2/3 on the views, T on Today.`));
-  body.appendChild(ag);
+  box.appendChild(row);
+  return row;
+}
 
-  const sg = el('div','grp');
-  sg.appendChild(navRow('saving', savingTitle(), PANES.saving.summary()));
-  body.appendChild(sg);
+function renderCalendarPane(body){
+  renderYearPane(body);
+  renderTermsPane(body);
+  renderWeekCountPane(body);
+  renderWeekendsPane(body);
+  const g = el('div','grp');
+  g.appendChild(navRow('holidays', 'Holidays', PANES.holidays.summary()));
+  body.appendChild(g);
+}
+
+function renderDisplayPane(body){
+  const h = card(body, 'Shortcut hints');
+  choiceRow(h, [[false,'Hide'],[true,'Show']], v => showHints() === v,
+            v => { setHints(v); schedulePaneRepaint(); });
+  h.appendChild(el('div','note',
+    `Shows the key on the button itself — ${MODG}K on search, 1/2/3 on the views, T on Today.`));
+
+  renderPlanAhead(body);
+}
+
+function renderAdvancedPane(body){
+  const g = el('div','grp');
+  g.appendChild(navRow('rollover', 'Start a new school year', PANES.rollover.summary()));
+  body.appendChild(g);
+
+  const a = card(body, 'Archived years');
+  const list = (state.archives || []);
+  if (!list.length){
+    a.appendChild(el('div','note',
+      'Past years are kept here once you start a new one, read-only and still searchable.'));
+  } else {
+    list.forEach(x => {
+      const row = el('div','holitem');
+      row.appendChild(el('span','d', x.label));
+      row.appendChild(el('span','r',
+        `${x.courses.length} class${x.courses.length === 1 ? '' : 'es'}`));
+      a.appendChild(row);
+    });
+    a.appendChild(el('div','note',
+      'Read-only. Filter search by year to pull a unit forward. ' +
+      `${ARCHIVE_CAP} years are kept.`));
+  }
 }
 
 const savingTitle = () => dirHandle ? 'Saving to a folder' : 'Where plans are saved';
@@ -3530,9 +3728,10 @@ function navRow(key, name, value){
 
 /** How far ahead an unplanned lesson is worth flagging. */
 function renderPlanAhead(box){
+  const c = card(box, 'Plan ahead');
   const row = el('div','addrow');
-  const l = el('span','note','Plan ahead');
-  l.style.minWidth = '86px'; l.style.alignSelf = 'center';
+  const l = el('span','note','Flag up to');
+  l.style.minWidth = '58px'; l.style.alignSelf = 'center';
   const inp = document.createElement('input');
   inp.type = 'number'; inp.min = '0'; inp.max = '52';
   inp.dataset.k = 'planahead';
@@ -3540,11 +3739,11 @@ function renderPlanAhead(box){
   inp.style.maxWidth = '70px';
   inp.onchange = () => commit('Plan-ahead changed',
     () => { state.planAhead = Math.max(0, Math.min(52, Number(inp.value) || 0)); });
-  const suffix = el('span','note','weeks');
+  const suffix = el('span','note','weeks ahead');
   suffix.style.alignSelf = 'center';
   row.appendChild(l); row.appendChild(inp); row.appendChild(suffix);
-  box.appendChild(row);
-  box.appendChild(el('div','note',
+  c.appendChild(row);
+  c.appendChild(el('div','note',
     'Lessons with nothing set inside this window are marked Unplanned. Further out they stay quiet.'));
 }
 
@@ -3599,8 +3798,102 @@ function renderClassList(g){
 
 /** Move a row, and clear the drag marker first so the repaint that follows
     isn't waved away by its own guard. */
+/* ── Reordering rows ─────────────────────────────────────────────────────
+   Rows drop BETWEEN rows, not onto them. The day drag has had an insertion
+   caret since the beginning; this is the same element turned on its side, so
+   both gestures read the same way. */
+
+/**
+ * Which seam the pointer is nearest, across a whole list of rows.
+ *
+ * Asked at the CONTAINER, not per row, for two reasons: the gaps between rows
+ * are live drop targets rather than dead strips, and a per-row handler plus a
+ * container fallback both fire on one drop — the container ran second and won,
+ * which is why a row dropped anywhere in the class editor used to land at the
+ * bottom.
+ */
+function seamAt(container, sel, e){
+  const rows = [...container.querySelectorAll(sel)];
+  if (!rows.length) return { seam:0, node:null, before:true };
+  for (let i = 0; i < rows.length; i++){
+    const r = rows[i].getBoundingClientRect();
+    if (e.clientY < r.top + r.height / 2) return { seam:i, node:rows[i], before:true };
+    if (e.clientY <= r.bottom) return { seam:i + 1, node:rows[i], before:false };
+  }
+  const last = rows[rows.length - 1];
+  return { seam: rows.length, node: last, before:false };
+}
+
+function showSeam(node, before){
+  const c = $('dragCaret'), r = node.getBoundingClientRect();
+  c.classList.add('horizontal');
+  c.style.height = '';
+  c.style.display = 'block';
+  c.style.left = r.left + 'px';
+  c.style.width = r.width + 'px';
+  c.style.top = ((before ? r.top : r.bottom) - 1.5) + 'px';
+  c.style.opacity = '1';
+  requestAnimationFrame(() => c.classList.add('slide'));
+}
+
+function hideSeam(){
+  const c = $('dragCaret');
+  c.style.display = 'none';
+  c.style.width = '';
+  c.classList.remove('slide','horizontal');
+}
+
+/**
+ * Wire one row element as both a drag source and a seam target.
+ * @param mime the drag type, which is what keeps the grid's row labels and the
+ *   class editor's rows from accepting each other's drops.
+ */
+/** The drag source half: one row element. */
+function bindRowDrag(node, handle, ri, mime){
+  node.draggable = true;
+  node.ondragstart = e => {
+    if (handle && handle.isContentEditable && document.activeElement === handle)
+      return e.preventDefault();
+    e.dataTransfer.setData(mime, String(ri));
+    e.dataTransfer.effectAllowed = 'move';   /* without this macOS shows a copy badge */
+    node.classList.add('dragging');
+  };
+  node.ondragend = () => { node.classList.remove('dragging'); hideSeam(); };
+}
+
+/**
+ * The drop half: one handler for the whole list.
+ * @param mime is what keeps the grid's row labels and the class editor's rows
+ *   from accepting each other's drops.
+ */
+function bindRowDropZone(container, sel, mime, onDrop){
+  container.ondragover = e => {
+    if (!e.dataTransfer.types.includes(mime)) return;
+    e.preventDefault();
+    const t = seamAt(container, sel, e);
+    if (t.node) showSeam(t.node, t.before);
+  };
+  container.ondragleave = e => {
+    if (!container.contains(e.relatedTarget)) hideSeam();
+  };
+  container.ondrop = e => {
+    if (!e.dataTransfer.types.includes(mime)) return;
+    e.preventDefault();
+    hideSeam();
+    const from = Number(e.dataTransfer.getData(mime));
+    if (Number.isNaN(from)) return;
+    /* The seam is an insert position. dropRow splices the source out first, so
+       every seam below it has shifted up one by the time it inserts. */
+    const { seam } = seamAt(container, sel, e);
+    const to = from < seam ? seam - 1 : seam;
+    if (to === from) return;
+    onDrop(from, to);
+  };
+}
+
 function dropRow(c, from, to){
-  document.querySelectorAll('.rowedit.dragging').forEach(n => n.classList.remove('dragging'));
+  document.querySelectorAll('.rowedit.dragging,.rowlabel.dragging')
+          .forEach(n => n.classList.remove('dragging'));
   if (Number.isNaN(from) || from === to) return;
   commit('Rows reordered', () => {
     const [m] = c.rows.splice(from, 1);
@@ -3711,7 +4004,6 @@ function renderClassEditor(p, c){
   rowsG.appendChild(el('label','','Rows'));
   c.rows.forEach((r, ri) => {
     const item = el('div','rowedit');
-    item.draggable = true;
     item.appendChild(el('span','grip','⋮⋮'));
     const txt = el('span','txt', r.label);
     txt.contentEditable = 'true';
@@ -3721,6 +4013,7 @@ function renderClassEditor(p, c){
       else txt.textContent = r.label;
     };
     txt.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); txt.blur(); } };
+    plainPasteOn(txt, false);
     item.appendChild(txt);
     const role = rowRole(r);
     if (role && hwOn(c)){
@@ -3739,22 +4032,7 @@ function renderClassEditor(p, c){
     };
     item.appendChild(x);
 
-    item.ondragstart = e => {
-      if (txt.isContentEditable && document.activeElement === txt) return e.preventDefault();
-      e.dataTransfer.setData('text/erow', String(ri));
-      e.dataTransfer.effectAllowed = 'move';   /* without this macOS shows a copy badge */
-      item.classList.add('dragging');
-    };
-    item.ondragend   = () => item.classList.remove('dragging');
-    item.ondragover  = e => {
-      if (!e.dataTransfer.types.includes('text/erow')) return;
-      e.preventDefault(); item.classList.add('over');
-    };
-    item.ondragleave = () => item.classList.remove('over');
-    item.ondrop = e => {
-      e.preventDefault(); item.classList.remove('over');
-      dropRow(c, Number(e.dataTransfer.getData('text/erow')), ri);
-    };
+    bindRowDrag(item, txt, ri, 'text/erow');
     rowsG.appendChild(item);
   });
   const addRow = el('div','addrow');
@@ -3772,17 +4050,9 @@ function renderClassEditor(p, c){
   rbtn.onclick = doAdd;
   rin.onkeydown = e => { if (e.key === 'Enter') doAdd(); };
   addRow.appendChild(rin); addRow.appendChild(rbtn);
-  /* .grp has an 8px gap, so without this the strips between rows swallow a
-     drop and nothing happens. */
-  rowsG.ondragover = e => {
-    if (e.dataTransfer.types.includes('text/erow')) e.preventDefault();
-  };
-  rowsG.ondrop = e => {
-    if (!e.dataTransfer.types.includes('text/erow')) return;
-    e.preventDefault();
-    const from = Number(e.dataTransfer.getData('text/erow'));
-    dropRow(c, from, c.rows.length - 1);
-  };
+  /* One handler for the list, so the 8px gaps between rows are live seams
+     rather than dead strips. */
+  bindRowDropZone(rowsG, '.rowedit', 'text/erow', (from, to) => dropRow(c, from, to));
   rowsG.appendChild(addRow);
   p.appendChild(rowsG);
 
@@ -3852,6 +4122,21 @@ function termEditor(box, get, set, inherited){
   }
 
   const abbr = TERM_MODES[eff.mode].abbr || 'T';
+
+  /* The editor only ever said where terms START, which is why a term running
+     past the end of the year was invisible. */
+  if (eff.starts.length > 1){
+    const spans = el('div','note');
+    spans.style.lineHeight = '1.7';
+    eff.starts.forEach((st, i) => {
+      const end = i + 1 < eff.starts.length ? addDays(eff.starts[i+1], -1) : state.yearEnd;
+      const line = el('div','', `${abbr}${i+1} · ${fmtMed(st)} – ${fmtMed(end)}`);
+      if (end < st) line.style.color = 'var(--warn)';
+      spans.appendChild(line);
+    });
+    box.appendChild(spans);
+  }
+
   eff.starts.forEach((s, i) => {
     if (i === 0) return;                       // term 1 always opens with the year
     const row = el('div','addrow');
@@ -3882,12 +4167,10 @@ function termEditor(box, get, set, inherited){
     });
     box.appendChild(add);
   }
-  box.appendChild(el('div','note','Week numbers count from the start of the current term.'));
 }
 
 function renderYearPane(box){
-  const yg = el('div','grp');
-  yg.appendChild(el('label','','School year'));
+  const yg = card(box, 'School year');
   [['yearStart','First day'],['yearEnd','Last day']].forEach(([k,lab]) => {
     const row = el('div','addrow');
     const l = el('span','note', lab);
@@ -3905,7 +4188,6 @@ function renderYearPane(box){
     row.appendChild(l); row.appendChild(inp);
     yg.appendChild(row);
   });
-  box.appendChild(yg);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -4072,8 +4354,7 @@ function renderRolloverPane(box){
 }
 
 function renderWeekendsPane(box){
-  const wg = el('div','grp');
-  wg.appendChild(el('label','','Weekends'));
+  const wg = card(box, 'Weekends');
   const wrow = el('div','dayrow');
   const forced = weekendsInUse();
   [[false,'Hide'],[true,'Show']].forEach(([v,lab]) => {
@@ -4092,17 +4373,31 @@ function renderWeekendsPane(box){
   wg.appendChild(el('div','note', forced
     ? 'On, because a class is set to meet on a Saturday or Sunday.'
     : 'Adds Saturday and Sunday columns to the week and month views.'));
-  box.appendChild(wg);
 }
 
 function renderTermsPane(box){
-  const tg = el('div','grp');
-  tg.appendChild(el('label','','Terms'));
+  const tg = card(box, 'Terms');
   termEditor(tg,
     () => state.terms,
     v => { commit('Terms changed', () => { state.terms = v || state.terms; }); },
     null);
-  box.appendChild(tg);
+}
+
+function renderWeekCountPane(box){
+  const wc = weekCount();
+  const set = patch => commit('Week numbering changed',
+    () => { state.weekCount = Object.assign({}, weekCount(), patch); });
+
+  const f = card(box, 'Week numbers');
+  choiceRow(f, [['term','Restart each term'],['year','Count all year']],
+            v => wc.from === v, v => set({ from:v }));
+
+  const e = card(box, 'Weeks that are entirely holiday');
+  choiceRow(e, [[true,'Skip'],[false,'Count']],
+            v => !!wc.skipEmpty === v, v => set({ skipEmpty:v }));
+  e.appendChild(el('div','note', wc.skipEmpty
+    ? 'A week with no teaching day in it takes no number, so the week after a break carries on where the week before left off.'
+    : 'Every calendar week takes a number, including weeks you are away for all of.'));
 }
 
 function renderHolidaysPane(box){
@@ -4288,6 +4583,8 @@ function renderHelp(p){
     ['<kbd>←</kbd> <kbd>→</kbd>', 'Previous / next day, week or month'],
     ['<kbd>Esc</kbd>', 'Leave a box, drop a selection, close a menu, or cancel a drag'],
   ];
+  const cols = el('div','helpcols');
+
   const g1 = el('div','grp');
   g1.appendChild(el('label','','Moving days around'));
   rows.forEach(([g,d]) => {
@@ -4296,7 +4593,7 @@ function renderHelp(p){
     r.appendChild(el('div','d', d));
     g1.appendChild(r);
   });
-  p.appendChild(g1);
+  cols.appendChild(g1);
 
   const g2 = el('div','grp');
   g2.appendChild(el('label','','Keyboard'));
@@ -4307,13 +4604,19 @@ function renderHelp(p){
     r.appendChild(el('div','d', d));
     g2.appendChild(r);
   });
-  p.appendChild(g2);
-
   const g3 = el('div','grp');
   g3.appendChild(el('label','','How the schedule works'));
   g3.appendChild(el('div','note',
     'Lessons are an ordered list, not a set of dates. Each class has the weekdays it meets, and the app lays the list onto those dates in order. That’s why inserting one day pushes everything after it forward automatically, and why a holiday shifts every class by one of its own meetings.'));
-  p.appendChild(g3);
+
+  /* Both in the right-hand column: the gesture list is the long one, so
+     stacking the short list and the explainer beside it is what balances the
+     two columns and keeps the page inside one screen. */
+  const right = el('div','grp');
+  right.appendChild(g2);
+  right.appendChild(g3);
+  cols.appendChild(right);
+  p.appendChild(cols);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -4740,9 +5043,9 @@ function setSearchFilter(patch){
 
 function snippet(text, needle){
   const at = text.toLowerCase().indexOf(needle);
-  if (at < 0) return text.slice(0, 90);
-  const s = Math.max(0, at - 30);
-  return (s ? '…' : '') + text.slice(s, at + needle.length + 60).trim() + '…';
+  if (at < 0) return text.slice(0, 150);
+  const s = Math.max(0, at - 40);
+  return (s ? '…' : '') + text.slice(s, at + needle.length + 110).trim() + '…';
 }
 
 /* An archived year has its own calendar. meetingDates reads the LIVE year, so
@@ -4809,11 +5112,13 @@ function renderHits(){
   }
   searchHits.forEach((h, i) => {
     const row = el('div','hit');
+    const top = el('div','top');
     const badge = el('div','mc', shortLabel(h.course.name));
     badge.style.setProperty('--c', h.course.color);
-    row.appendChild(badge);
-    row.appendChild(el('div','d', h.date ? fmtMed(h.date) : 'past end'));
-    row.appendChild(el('div','t', h.lesson.title || '—'));
+    top.appendChild(badge);
+    top.appendChild(el('div','t', h.lesson.title || '—'));
+    top.appendChild(el('div','d', h.date ? fmtMed(h.date) : 'past end'));
+    row.appendChild(top);
     const s = el('div','s');
     /* Highlight the match without letting stored text become markup. */
     const at = h.snip.toLowerCase().indexOf(h.needle);

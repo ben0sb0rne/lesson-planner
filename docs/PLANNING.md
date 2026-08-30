@@ -520,4 +520,51 @@ badge to lead the date at full size, because it's the thing Ben actually navigat
 
 ---
 
+## 8f. Two handlers, one drop
+
+Rows in the class editor had a drop handler each, plus one on the container to catch the 8px gaps
+between them. Drop events bubble, so both fired on every drop — and because the container ran
+second, its `dropRow(c, from, c.rows.length - 1)` overwrote whatever the row had just decided. A row
+dropped anywhere landed at the bottom.
+
+That had been true since the fallback was added, and it was invisible because the row's own answer
+was usually close enough to the container's to look like a near miss. Converting the same rows to
+insertion seams is what made it obvious: the caret drew in one place and the row landed in another.
+
+The fix isn't `stopPropagation` — it's that a list has one drop target, not n+1. The container owns
+the drop, walks its rows to find the nearest seam, and the gaps fall out of the same walk rather
+than needing a special case.
+
+**The index correction is the part worth remembering.** A seam is an *insert before* position, but
+the source is spliced out first, so every seam below it has already shifted up one:
+
+```js
+const to = from < seam ? seam - 1 : seam;
+```
+
+Without it, dragging a row downward past its own position lands one short — the one direction that
+looks like a rounding error rather than a bug.
+
+---
+
+## 8g. Terms had no end
+
+`termOn` picked the last term whose start was on or before the date. Nothing bounded the other side,
+so the final term ran to the heat death of the calendar: the date picker would report "Trimester 3 ·
+Week 97" for January 2029, and "Trimester 1" for August before the year began.
+
+It stayed hidden because the terms editor only ever showed where terms *start*. Nothing in the UI
+ever named an end, so there was nothing to look wrong. The editor now prints each term's computed
+range — no new stored field, since terms are contiguous by definition: one ends the day before the
+next begins, and the last ends with the year.
+
+Week numbering became two questions the model had been answering by assumption. Counting can restart
+each term or run straight through the year, and weeks that are entirely holiday can consume a number
+or not. Skipping is the default — a Christmas fortnight used to eat two week numbers, which is not
+how a school counts. Skipping needs an *ordinal* index of weeks containing a teaching day, not
+calendar arithmetic, so it is memoised beside `schoolDays()` on the same key plus the weekend
+setting; recomputing per paint would be O(days) per cell.
+
+---
+
 See [ROADMAP.md](ROADMAP.md) for build order.

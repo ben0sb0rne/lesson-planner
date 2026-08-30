@@ -35,8 +35,11 @@ Day · Week · Month · All Classes, each in single-class and all-class form. Da
 header (`Aug 31 – Sep 4, 2026`). Today hides itself when pressing it wouldn't move anything.
 
 ### Editing
-Rich text cells — bold, italic, bullets, numbers. Paste sanitised to those tags, so Word and
-Google Docs can't inject styling. Per-class row sets, drag to reorder, rename in place.
+Rich text cells — bold, italic, bullets, numbers. **Paste is always plain text** — from a slide
+deck, a document or another cell. Keeping a safe subset of tags never kept up with what Word and
+PowerPoint invent; fonts, sizes and colours arrived wearing tags that were on the list. Whitespace
+collapses, blank lines drop, each line stays a line, and every editable surface does it, not just
+the grid cells. Per-class row sets, drag to reorder, rename in place.
 Tab walks down a day then on to the next; ⌥← / ⌥→ move sideways to the same box.
 
 ### Getting things in and out
@@ -48,6 +51,31 @@ Tab walks down a day then on to the next; ⌥← / ⌥→ move sideways to the s
   with a dated backup a day, keeping 30. Conflict detection by revision; it asks rather than
   merging. localStorage stays a mirror. See [PLANNING.md §8](PLANNING.md).
 
+### Reordering rows
+Rows drop **between** rows, on the same insertion caret the day drag has always used, turned on its
+side. The gaps between rows are live seams rather than dead strips, and one handler owns the drop —
+previously a per-row handler and a container fallback both fired, the fallback ran second, and a row
+dropped anywhere in the class editor silently landed at the bottom.
+
+### Settings
+Five sections on a left rail — Classes, Calendar, Display, Saving, Advanced — in a 640px panel.
+Each fits without scrolling; the single column had grown to 1195px of content in an 884px view.
+
+The type scale was the real complaint. A section header was 11px uppercase muted while the rows
+under it were 14px semibold, so "Holidays" read louder than the "Calendar" it sat in. Labels now
+outrank their contents, every control sits in a labelled block, and nothing floats unlabelled —
+the shortcut-hints toggle used to have no label at all, only a note underneath.
+
+### Terms and week numbers
+Terms **end**. `termOn` had no upper bound, so the last term ran forever: the date picker reported
+"Trimester 3 · Week 97" for a date in 2029, and "Trimester 1" for dates before the year began. The
+terms editor now also shows each term's range, which is why the problem was invisible — it only
+ever said where terms *start*.
+
+Week numbering has two options: restart each term or count straight through the year, and skip or
+count weeks that are entirely holiday. Skipping is the default and the common convention — a
+Christmas fortnight used to consume two week numbers.
+
 ### Getting around
 ⌘K search across every class, by lesson title or cell text, **filtered by class and by school
 year**. Shift-click day headers to select a run and tag them all at once. Right-click a day →
@@ -56,6 +84,11 @@ for.
 
 Opening a result keeps the view you were in — it used to force day view, which lost your place.
 Clicking back into the box brings the results back, and a result takes one click.
+
+The results panel is exactly as wide as the search box, which grows 260→380px as you type. It used
+to be 560px under a 260px box, hanging 301px to the left with nothing above it. Each result is two
+lines — title and date, then the snippet wrapping rather than truncating, which is what the
+autocomplete literature recommends and what made the match readable.
 
 ### The top bar
 Two rows: everything on the first, class tabs on the second, and that second row disappears
