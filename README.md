@@ -38,15 +38,35 @@ There's no pinning. If a date matters, change the lessons instead.
 | Drag a day **between** two others | Inserts it there; everything after shifts forward one meeting |
 | Drag a day **onto** another | Swaps them; nothing else moves |
 | Right-click a day | Insert, swap, duplicate, clear, remove, mark No Class, copy to another class |
-| Shift-click day headers | Selects a run, then tag them all at once |
-| `⌘K` | Search every class |
+| Shift-click day headers | Selects a run, then tag them all — or **Copy** the whole run |
+| Right-click after a Copy | Insert or replace those days in any class |
+| Click the date | A calendar, to jump somewhere without stepping |
+| `⌘K` | Search — filter by class and by school year |
 | `⌘Z` / `⌘⇧Z` | Undo / redo — a whole ripple is one press |
+| `1` `2` `3` · `T` | Day / week / month view · jump to today |
 | `Tab` | Next box down the day, then on to the next day |
 | `⌥←` `⌥→` | Same box, previous / next day |
+
+On Windows every `⌘` above is `Ctrl` — the app writes the right one for the machine it's on.
 
 **Clear day** wipes the plan but keeps the meeting. **Remove day** deletes the meeting and closes
 the gap. **No Class** drops that one date for that one class and ripples it forward, like a
 private holiday. They're three different things and never share a button.
+
+---
+
+## Next year
+
+**Settings → Start a new school year.** New dates, tick which classes come with you. Lesson plans,
+rows, colours and meeting days carry; dates, holidays, No Class days, statuses, ticked boxes and
+pinned due dates don't.
+
+Because lessons hold no dates, this is nearly free — the ordered list is the asset and it doesn't
+care what year it's laid onto.
+
+Last year stays **in the same file**, read-only, and stays searchable. Filter search by year, find
+the unit, preview the day, **Copy this day**, and paste it into this year. Three years are kept,
+and it won't run until you've saved a backup.
 
 ---
 

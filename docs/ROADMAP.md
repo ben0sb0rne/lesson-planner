@@ -49,9 +49,52 @@ Tab walks down a day then on to the next; ⌥← / ⌥→ move sideways to the s
   merging. localStorage stays a mirror. See [PLANNING.md §8](PLANNING.md).
 
 ### Getting around
-⌘K search across every class, by lesson title or cell text. Shift-click day headers to select a
-run and tag them all at once. Right-click a day → *Copy this day to* another class, matching rows
-by name and naming anything the target has no row for.
+⌘K search across every class, by lesson title or cell text, **filtered by class and by school
+year**. Shift-click day headers to select a run and tag them all at once. Right-click a day →
+*Copy this day to* another class, matching rows by name and naming anything the target has no row
+for.
+
+Opening a result keeps the view you were in — it used to force day view, which lost your place.
+Clicking back into the box brings the results back, and a result takes one click.
+
+### The top bar
+Two rows: everything on the first, class tabs on the second, and that second row disappears
+entirely for a single-class user.
+
+The view switcher is centred by a `1fr auto 1fr` grid. Two flex spacers only centre when what
+flanks them matches, which it never did — the switcher sat ~74px left of centre and slid a further
+45px on every ⌘K, because the search box grew on focus. The search box now has one width.
+
+The week number leads the date at the same size, and both live in one button that opens a
+**calendar** — in week view a whole week lights up, because that is what the anchor selects there.
+Month names are spelled out. Today sits last in its cluster so appearing and vanishing moves
+nothing; it used to sit first and take ~72px of gap with it.
+
+Save shrinks to a dot when a folder is connected and there is nothing to report, and grows back
+into words the moment there is. Shortcut hints on the buttons are a setting, off by default, and
+`1` `2` `3` `T` are real keys now rather than badges promising something that didn't exist. The
+`⌘` glyph is derived from the platform, so Windows reads `Ctrl`.
+
+### Reuse
+Shift-click a run of days → **Copy** → right-click a day in any class → *insert* (splices and
+ripples) or *replace* (overwrites in place). Rows match by label; anything missing is named once
+for the whole range, not once per day. Twenty days is one undo entry.
+
+Checkboxes untick, statuses reset and calendar-pinned due dates drop. Both relative due forms
+survive, because each re-resolves against wherever the lesson lands.
+
+### A new school year
+**Settings → Start a new school year.** Rebuilds the dates, terms and holidays; carries lesson
+plans, rows, colours, meeting days and homework settings; ticks a class to bring it forward.
+Cheap because lessons hold no dates — the ordered list is the asset.
+
+The outgoing year is kept **in the same file, read-only**, and stays searchable: filter search by
+year, preview a day, *Copy this day*, paste it into this year. That is how a unit actually comes
+forward. Three years are kept. A backup is required before it will run.
+
+Archived years are deliberately left out of undo snapshots — the stack holds 60 entries, and
+cloning several dead years on every keystroke-adjacent edit would be the most expensive mistake
+available here. Rollover banks a full snapshot instead, so undoing it removes the copy too.
 
 ### Marking up a lesson
 **Tags** say what a lesson is (Test, Quiz, Lab…). **Status** says whether it's ready to teach —
@@ -114,7 +157,7 @@ current beside `planner.json` so it's always there without exporting anything.
 
 ### Not built, on purpose
 Ripple **preview** (undo covers it and it hasn't been missed) · row-range operations · pinned
-lessons · year rollover · print CSS.
+lessons · print CSS.
 
 ---
 
@@ -138,8 +181,6 @@ Deliberately unscheduled — real use should decide the order, not this document
   The original "rows of days" ask, and nothing on the market does it.
 - **Ripple preview** — downstream days dim and offset before you commit.
 - **Print / sub plan** — a clean one-page day or week for a substitute. xlsx may already cover it.
-- **Year rollover** — reuse a class's sequence against next year's calendar. Nearly free, because
-  lessons carry no dates.
 - **Unit labels** — name a span of lessons and see the boundaries in month view.
 
 ---

@@ -40,23 +40,30 @@ body.dragging{cursor:grabbing!important; user-select:none}
 body.dragging *{cursor:grabbing!important}
 
 /* ─────────────────────────── Top bar ─────────────────────────── */
+/* 1fr auto 1fr, not two flex spacers. Spacers only centre when what flanks
+   them is the same width, which it never was — the switcher sat ~74px left of
+   centre and slid further on every ⌘K. The auto column is centred by the grid
+   itself, whatever the sides do. In flow, so the existing narrow-window rules
+   still apply; absolute positioning would overlap instead of degrading. */
 .topbar{
-  display:flex; align-items:center; gap:16px; padding:10px 18px;
+  display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px;
+  padding:9px 18px;
   background:var(--surface); border-bottom:1px solid var(--border); flex:0 0 auto;
 }
-.brand{font-weight:650; letter-spacing:-.01em; font-size:15px; white-space:nowrap}
-.brand small{color:var(--faint); font-weight:500; margin-left:7px; font-size:11px;
-  text-transform:uppercase; letter-spacing:.08em}
+.tbleft{display:flex; align-items:center; gap:9px; min-width:0}
+.tbright{justify-self:end; display:flex; align-items:center; gap:7px; min-width:0}
 .spacer{flex:1}
 
-.segmented{display:flex; background:var(--surface-2); border-radius:8px; padding:3px; gap:2px}
+.navgrp{display:flex; align-items:center; gap:3px; flex:0 0 auto}
+
+.segmented{justify-self:center; display:flex; background:var(--surface-2);
+  border-radius:8px; padding:3px; gap:2px}
 .segmented button{
   padding:5px 15px; border-radius:6px; font-size:13px; color:var(--muted); font-weight:500;
 }
 .segmented button:hover{color:var(--text)}
 .segmented button.on{background:var(--surface); color:var(--text); box-shadow:var(--shadow); font-weight:600}
 
-.icons{display:flex; gap:2px; align-items:center}
 .ico{
   width:32px; height:32px; border-radius:8px; display:grid; place-items:center;
   color:var(--muted);
@@ -100,22 +107,32 @@ body.dragging *{cursor:grabbing!important}
   cursor:text;
 }
 
-/* ─────────────────────────── Sub bar ─────────────────────────── */
-.subbar{
-  display:flex; align-items:center; gap:10px; padding:9px 18px;
-  border-bottom:1px solid var(--border); flex:0 0 auto; background:var(--bg);
-}
+/* ─────────────────────────── Date + nav ─────────────────────────── */
 .navbtn{
   width:27px;height:27px;border-radius:7px;border:1px solid var(--border);
   display:grid;place-items:center;color:var(--muted);font-size:14px;
 }
 .navbtn:hover{background:var(--surface); color:var(--text)}
-.period{display:flex; align-items:baseline; gap:9px; font-weight:620; font-size:14.5px;
-  letter-spacing:-.01em; white-space:nowrap}
-.period .wk{
-  font-size:11px; font-weight:650; color:var(--faint); letter-spacing:.05em;
-  text-transform:uppercase; border:1px solid var(--border); border-radius:20px;
-  padding:1px 8px; white-space:nowrap;
+/* The week number leads and shares the date's size — it used to be an 8px
+   uppercase badge trailing behind, which is not something you can read at a
+   glance. Both live in one button, so the whole label opens the calendar. */
+.period{
+  display:flex; align-items:baseline; gap:8px; padding:3px 8px; border-radius:7px;
+  white-space:nowrap; color:var(--text); background:none; border:none; min-width:0;
+}
+.period:hover{background:var(--surface-2)}
+.period .lead{font-size:14.5px; font-weight:700; letter-spacing:-.01em; flex:0 0 auto}
+.period .dt{font-size:14.5px; font-weight:500; color:var(--muted); overflow:hidden;
+  text-overflow:ellipsis}
+.period .cv{font-size:9px; color:var(--faint); align-self:center; flex:0 0 auto}
+.period .short{display:none}
+/* The left cell now carries a week label AND a full-month date — at its worst
+   "Week 19 · S2  December 28, 2026 – January 1, 2027". Shed the label first,
+   then fall back to the short forms, well before anything can collide. */
+@media (max-width:1220px){ .period .lead{display:none} }
+@media (max-width:1000px){
+  .period .long{display:none}
+  .period .short{display:inline}
 }
 .overflowpill{
   font-size:12px; font-weight:560; color:var(--warn); border:1px solid var(--warn);
@@ -129,6 +146,9 @@ body.dragging *{cursor:grabbing!important}
   font-size:12px; font-weight:560; color:var(--muted); white-space:nowrap; max-width:250px;
 }
 .savepill:hover{background:var(--surface-2); color:var(--text)}
+.savepill.dotonly{padding:0; width:22px; height:22px; justify-content:center;
+  border-color:transparent; margin-right:2px}
+.savepill.dotonly:hover{border-color:var(--border)}
 .savepill .dot{width:7px; height:7px; border-radius:50%; background:currentColor; flex:0 0 auto}
 .savepill .sub{color:var(--faint); font-weight:500; min-width:0; overflow:hidden; text-overflow:ellipsis}
 .savepill .sub::before{content:'· '}
@@ -288,8 +308,17 @@ body.dragging *{cursor:grabbing!important}
 .tagpill{
   font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
   padding:2px 7px; border-radius:20px; color:#fff; background:var(--t);
+  display:inline-flex; align-items:center; height:19px;
 }
-.tagpill.none{background:transparent; color:var(--faint); border:1px dashed var(--border-strong)}
+/* An untagged pill used to gain a 1px dashed border on top of identical
+   padding, which made it 2px taller than a tagged one in the same row. One
+   declared height settles it in both directions — with no text there is no
+   line box to size it either. */
+.tagpill.none{
+  background:transparent; color:var(--faint); border:1px dashed var(--border-strong);
+  padding:1px 6px; min-width:22px;
+}
+.tagpill.none:hover{border-color:var(--muted)}
 
 /* Status sits beside the tag but reads differently on purpose — outlined, not
    filled — so "what this lesson is" and "whether it's ready" don't compete. */
@@ -527,6 +556,77 @@ ul.cl li[data-c="1"]{color:var(--faint); text-decoration:line-through;
   box-shadow:var(--shadow); z-index:80;
 }
 .menu.on{display:flex}
+/* The stepper menu is five short rows; 250px would be mostly air. */
+.menu.narrow{min-width:196px}
+
+/* ── Jump-to-a-date calendar ── */
+.menu.cal{min-width:0; width:232px; padding:7px}
+.calhd{display:flex; align-items:center; justify-content:space-between; padding:1px 2px 7px}
+.calhd b{font-size:13px}
+.calnav{
+  width:24px; height:24px; border-radius:6px; display:grid; place-items:center;
+  color:var(--muted); font-size:14px; flex:0 0 auto;
+}
+.calnav:hover{background:var(--surface-2); color:var(--text)}
+.calgrid{display:grid; gap:1px; text-align:center}
+.calgrid em{
+  font-style:normal; font-size:9px; font-weight:700; color:var(--faint);
+  padding-bottom:4px; letter-spacing:.04em;
+}
+.calday{
+  font-size:11.5px; padding:4px 0; border-radius:5px; color:var(--text);
+  font-variant-numeric:tabular-nums;
+}
+.calday.out{color:var(--faint); opacity:.5}
+.calday.hol{
+  background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 2px,
+             transparent 2px,transparent 4px);
+  color:var(--faint);
+}
+.calday.today{font-weight:800; color:var(--accent)}
+.calday:hover,.calday.wkhov{background:var(--surface-2)}
+.calday.sel{background:color-mix(in srgb,var(--accent) 20%,transparent); font-weight:700}
+.calft{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  margin-top:6px; padding-top:6px; border-top:1px solid var(--border);
+}
+.callink{font-size:11.5px; font-weight:650; color:var(--accent); padding:2px 5px; border-radius:5px}
+.callink:hover{background:var(--surface-2)}
+.calwk{font-size:10.5px; color:var(--faint); white-space:nowrap}
+
+/* ── A day from an archived year ── */
+.menu.preview{min-width:0; width:330px}
+.pvbody{max-height:46vh; overflow:auto; padding:2px 9px 7px}
+.pvtitle{font-size:13.5px; font-weight:650; margin-bottom:7px}
+.pvrow{
+  font-size:9.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--faint); margin-top:8px;
+}
+.pvtext{font-size:12.5px; color:var(--muted); white-space:pre-wrap; line-height:1.45}
+.duestep{display:flex; align-items:center; gap:4px; padding:2px 5px 6px}
+.stepbtn{
+  width:26px; height:26px; flex:0 0 auto; display:grid; place-items:center;
+  border:1px solid var(--border); border-radius:7px; background:var(--surface);
+  color:var(--text); font-size:15px; line-height:1; cursor:pointer; padding:0;
+}
+.stepbtn:hover:not(:disabled){background:var(--surface-2)}
+.stepbtn:disabled{opacity:.35; cursor:default}
+.stepval{
+  min-width:26px; text-align:center; font-size:14px; font-weight:700;
+  font-variant-numeric:tabular-nums;
+}
+.unitsw{display:flex; margin-left:auto; background:var(--surface-2); border-radius:7px; padding:2px}
+.unitsw button{
+  min-width:0; padding:3px 7px; border:none; background:none; border-radius:5px;
+  font-size:10.5px; color:var(--muted); cursor:pointer;
+}
+.unitsw button.on{background:var(--surface); color:var(--text); font-weight:650}
+.duewhen{
+  padding:0 9px 7px; font-size:11.5px; color:var(--muted);
+  border-bottom:1px solid var(--border); margin-bottom:3px;
+}
+.menu button.withico{display:flex; align-items:center; gap:8px}
+.menu .mico{width:14px; flex:0 0 auto; text-align:center; font-size:11px; opacity:.75}
 .menu .sec{
   font-size:10px; font-weight:700; color:var(--faint); text-transform:uppercase;
   letter-spacing:.08em; padding:7px 9px 4px;
@@ -697,18 +797,27 @@ kbd{
 /* ─────────────────────────── Search ─────────────────────────── */
 .searchbox{
   position:relative; display:flex; align-items:center; gap:7px; height:32px;
-  width:210px; padding:0 9px; border-radius:8px; background:var(--surface-2);
-  border:1px solid transparent; transition:width .16s ease, border-color .12s;
+  width:260px; padding:0 9px; border-radius:8px; background:var(--surface-2);
+  border:1px solid transparent; transition:border-color .12s, background .12s;
 }
-.searchbox:focus-within{width:300px; background:var(--surface); border-color:var(--accent)}
+/* One width. It used to grow 210→300px on focus, which slid everything to its
+   left by 45px on every ⌘K — and will shove a grid-centred row once the bar is
+   one. Only the surface changes now. */
+.searchbox:focus-within{background:var(--surface); border-color:var(--accent)}
 .searchbox .si{width:15px; height:15px; fill:none; stroke:var(--faint);
   stroke-width:1.9; stroke-linecap:round; flex:0 0 auto}
 .searchbox input{
   flex:1; min-width:0; border:none; background:none; outline:none; font-size:13px;
 }
 .searchbox input::placeholder{color:var(--faint)}
-.searchbox .hint{flex:0 0 auto; font-size:10px; opacity:.7}
-.searchbox:focus-within .hint{display:none}
+/* Every badge, including ⌘K's, now rides the same setting. One shortcut
+   advertised on its own was the inconsistency, not the badge itself. */
+.hint{display:none}
+body.hints .searchbox .hint{display:block; flex:0 0 auto; font-size:10px; opacity:.7}
+body.hints .searchbox:focus-within .hint{display:none}
+body.hints .segmented .hint,body.hints #today .hint{
+  display:inline-block; margin-left:5px; font-size:9px; opacity:.6; padding:0 3px;
+}
 .searchbox .hits{
   position:absolute; top:38px; right:0; width:min(560px,78vw); max-height:62vh;
   overflow:auto; padding:5px; display:none; z-index:78;
@@ -716,20 +825,32 @@ kbd{
   border-radius:11px; box-shadow:var(--shadow);
 }
 .searchbox .hits.on{display:block}
-/* Narrow windows: give the grid the room, and let the box grow back on focus. */
+.searchbox .sfilters{
+  display:flex; align-items:center; gap:7px; padding:3px 6px 7px;
+  border-bottom:1px solid var(--border); margin-bottom:4px;
+}
+.searchbox .sfilter{
+  font:inherit; font-size:12px; color:var(--muted); padding:2px 6px;
+  border:1px solid var(--border); border-radius:20px; background:var(--surface);
+  max-width:190px;
+}
+.searchbox .sfilter.set{border-color:var(--accent); color:var(--accent)}
+.searchbox .sfcount{margin-left:auto; font-size:11.5px; color:var(--faint);
+  white-space:nowrap; padding-right:4px}
+/* Narrow windows: give the grid the room. Below 820px the box collapses to its
+   icon and does still expand on focus — at that width the room matters more
+   than the row holding still. */
 @media (max-width:1040px){
-  .searchbox{width:150px}
-  .searchbox:focus-within{width:240px}
+  .searchbox{width:190px}
   .searchbox .hint{display:none}
 }
 @media (max-width:820px){
-  .brand small{display:none}
   .searchbox{width:34px; padding:0 8px}
   .searchbox input{opacity:0; transition:opacity .12s}
   .searchbox:focus-within{width:220px}
   .searchbox:focus-within input{opacity:1}
 }
-.searchbox .hit,.searchbox .hit{
+.searchbox .hit{
   display:flex; align-items:baseline; gap:9px; padding:8px 11px; border-radius:8px;
   cursor:pointer; font-size:13px;
 }
@@ -746,7 +867,7 @@ kbd{
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .searchbox .hit mark{background:color-mix(in srgb,var(--accent) 28%,transparent);
   color:inherit; border-radius:2px}
-.search .none{padding:22px 16px; text-align:center; color:var(--faint); font-size:13px}
+.searchbox .none{padding:22px 16px; text-align:center; color:var(--faint); font-size:13px}
 
 .empty-state{text-align:center;color:var(--muted);padding:70px 20px}
 .empty-state b{display:block;font-size:16px;margin-bottom:6px;color:var(--text)}
@@ -766,41 +887,43 @@ kbd{
 <body>
 
 <div class="topbar">
-  <div class="brand">Lesson Planner</div>
-  <div class="spacer"></div>
-  <div class="segmented" id="views"></div>
-  <div class="spacer"></div>
-  <div class="searchbox" id="searchbox">
-    <svg class="si" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8 20 20"/></svg>
-    <input id="searchInput" type="text" placeholder="Search all classes" autocomplete="off"
-           spellcheck="false" aria-label="Search all classes">
-    <kbd class="hint">⌘K</kbd>
-    <div class="hits" id="searchHits"></div>
+  <div class="tbleft">
+    <div class="navgrp">
+      <button class="navbtn" id="prev" title="Previous">‹</button>
+      <button class="navbtn" id="next" title="Next">›</button>
+    </div>
+    <button class="period" id="period" aria-haspopup="true" title="Jump to a date"></button>
+    <button class="iconbtn" id="today">Today</button>
   </div>
-  <button class="ico" id="btnMore" title="Menu" aria-label="Menu">
-    <svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.4" fill="currentColor" stroke="none"/>
-      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
-      <circle cx="18.5" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>
-  </button>
+  <div class="segmented" id="views"></div>
+  <div class="tbright">
+    <div id="overflow"></div>
+    <div class="searchbox" id="searchbox">
+    <svg class="si" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8 20 20"/></svg>
+    <input id="searchInput" type="text" placeholder="Search lessons" autocomplete="off"
+           spellcheck="false" aria-label="Search lessons">
+    <kbd class="hint" id="kbdSearch"></kbd>
+    <div class="hits" id="searchHits">
+      <div class="sfilters" id="searchFilters"></div>
+      <div class="hitlist" id="hitList"></div>
+    </div>
+  </div>
+    <div id="storage"></div>
+    <button class="ico" id="btnMore" title="Menu" aria-label="Menu">
+      <svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+        <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+        <circle cx="18.5" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>
+    </button>
+  </div>
 </div>
 
 <div class="tabs" id="tabs"></div>
 
-<div class="subbar">
-  <button class="navbtn" id="prev" title="Previous">‹</button>
-  <button class="navbtn" id="next" title="Next">›</button>
-  <button class="iconbtn" id="today">Today</button>
-  <div class="period" id="period"></div>
-  <div class="spacer"></div>
-  <div id="storage"></div>
-  <div id="overflow"></div>
-</div>
-
 <div class="stage" id="stage"></div>
 
 <div class="fmt" id="fmt">
-  <button data-cmd="bold" title="Bold (⌘B)"><b>B</b></button>
-  <button data-cmd="italic" title="Italic (⌘I)"><i>I</i></button>
+  <button data-cmd="bold" title="Bold" data-mod="B"><b>B</b></button>
+  <button data-cmd="italic" title="Italic" data-mod="I"><i>I</i></button>
   <button data-cmd="insertUnorderedList" title="Bullet list">•—</button>
   <button data-cmd="checklist" title="Checklist">☑</button>
   <button data-cmd="insertOrderedList" title="Numbered list">1.</button>
@@ -909,14 +1032,44 @@ const fmtMedY  = s => { const d = parse(s);
   return `${MON[d.getMonth()].slice(0,3)} ${d.getDate()}, ${d.getFullYear()}`; };
 const fmtDay   = s => { const d = parse(s);
   return `${DOW3[d.getDay()]}, ${MON[d.getMonth()].slice(0,3)} ${d.getDate()}, ${d.getFullYear()}`; };
+const fmtDayLong = s => { const d = parse(s);
+  return `${DOW[d.getDay()]}, ${MON[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`; };
 const dayDiff  = (a,b) => Math.round((parse(a) - parse(b)) / 86400000);
 const uid = () => Math.random().toString(36).slice(2,10);
+
+/* The handler has always accepted ctrlKey, but every label said ⌘ — so the
+   Windows machine was being told to press a key it doesn't have. */
+const IS_MAC = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent || '');
+const MODG = IS_MAC ? '\u2318' : 'Ctrl';        // alone, inside a <kbd>
+const MODK = IS_MAC ? '\u2318' : 'Ctrl+';       // inline in a sentence
+
+/* Whether to advertise shortcuts on the controls themselves. localStorage,
+   not state: "have I learned the shortcuts yet" is about the person at the
+   keyboard, and state travels to the other machine in planner.json. */
+const HINTS_KEY = 'lessonPlanner.hints';
+const showHints = () => localStorage.getItem(HINTS_KEY) === '1';
+function setHints(on){
+  localStorage.setItem(HINTS_KEY, on ? '1' : '0');
+  document.body.classList.toggle('hints', on);
+  render();
+}
 
 /** A span of days, collapsing whatever the two ends share.
     "Aug 24 – 28, 2026" · "Aug 31 – Sep 4, 2026" · "Dec 28, 2026 – Jan 1, 2027" */
 function fmtRange(a, b){
   const x = parse(a), y = parse(b);
   const mA = MON[x.getMonth()].slice(0,3), mB = MON[y.getMonth()].slice(0,3);
+  if (x.getFullYear() !== y.getFullYear())
+    return `${mA} ${x.getDate()}, ${x.getFullYear()} – ${mB} ${y.getDate()}, ${y.getFullYear()}`;
+  if (x.getMonth() !== y.getMonth())
+    return `${mA} ${x.getDate()} – ${mB} ${y.getDate()}, ${y.getFullYear()}`;
+  return `${mA} ${x.getDate()} – ${y.getDate()}, ${y.getFullYear()}`;
+}
+
+/** The same span with months spelled out, for the top bar only. */
+function fmtRangeLong(a, b){
+  const x = parse(a), y = parse(b);
+  const mA = MON[x.getMonth()], mB = MON[y.getMonth()];
   if (x.getFullYear() !== y.getFullYear())
     return `${mA} ${x.getDate()}, ${x.getFullYear()} – ${mB} ${y.getDate()}, ${y.getFullYear()}`;
   if (x.getMonth() !== y.getMonth())
@@ -934,10 +1087,10 @@ function fmtRange(a, b){
    ═══════════════════════════════════════════════════════════════════ */
 
 const TERM_MODES = {
-  semester:  { n:2, abbr:'S', label:'Semesters'  },
-  year:      { n:1, abbr:'',  label:'Whole year' },
-  trimester: { n:3, abbr:'T', label:'Trimesters' },
-  custom:    { n:0, abbr:'T', label:'Custom'     },
+  semester:  { n:2, abbr:'S', label:'Semesters',  long:'Semester'  },
+  year:      { n:1, abbr:'',  label:'Whole year', long:''          },
+  trimester: { n:3, abbr:'T', label:'Trimesters', long:'Trimester' },
+  custom:    { n:0, abbr:'T', label:'Custom',     long:'Term'      },
 };
 
 /** N term starts spread evenly across a year, each snapped to a Monday. */
@@ -964,6 +1117,12 @@ const termAbbr = t =>
   t && t.count > 1 && TERM_MODES[t.mode] && TERM_MODES[t.mode].abbr
     ? TERM_MODES[t.mode].abbr + (t.index + 1) : '';
 
+/** Spelled out, for the top bar's month view — a month spans several weeks,
+    so a week number there would be wrong; the term is the honest unit. */
+const termLong = t =>
+  t && t.count > 1 && TERM_MODES[t.mode] && TERM_MODES[t.mode].long
+    ? TERM_MODES[t.mode].long + ' ' + (t.index + 1) : '';
+
 /** "Week 3 · S1", or just "Week 3" when the year isn't divided. */
 function weekLabel(date, c){
   const t = termOn(date, c);
@@ -983,8 +1142,9 @@ const mkRows = labels => labels.map(l => ({ id:uid(), label:l }));
 function emptyState(){
   const yearStart = '2026-08-24', yearEnd = '2027-06-04';
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     yearStart, yearEnd,
+    archives: [],
     terms: { mode:'semester', starts: spreadTerms(yearStart, yearEnd, 2) },
     holidays: [],
     courses: [],
@@ -1007,7 +1167,8 @@ function load(){
   return emptyState();
 }
 
-/** Bring older files forward. v1 = rotating cycle, v2 = weekdays, v3 = terms. */
+/** Bring older files forward.
+    v1 = rotating cycle · v2 = weekdays · v3 = terms · v4 = archived years. */
 /** Rows this class shows only during a given calendar week. Pinned to dates,
     not to lesson positions — so nothing in the ripple engine has to know they
     exist, and inserting a day earlier leaves them on the week they were made
@@ -1030,6 +1191,9 @@ const rowsFor = (course, date) =>
 
      data-due="+2"          two meetings later — rides the ripple
      data-due="2026-12-19"  that exact date — pinned
+     data-due="d2"          two calendar days later — moves with the lesson
+                            that assigned it, but the gap stays in days, so
+                            it can land on a day the class doesn't meet
 
    data-dueon holds the rendered label and is rewritten every paint. It
    is never read as truth. Drawing the pill from it via ::after keeps it
@@ -1053,18 +1217,21 @@ function hwOn(c){
 
 const isPinned = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
 const isRelative = v => /^\+\d+$/.test(v || '');
+const isDays = v => /^d\d+$/.test(v || '');
 
 /**
  * Where an assignment lands.
- *   { date, pinned }  — date is null when it runs past the end of the course
- * Relative offsets count meetings from the lesson that assigned it, so a
- * holiday or a No Class day carries them along; pinned dates don't move.
+ *   { date, kind }  — date is null when it runs past the end of the course
+ *   kind: 'classes' counts meetings, so a holiday or a No Class day carries it
+ *         along · 'days' counts calendar days from the assigning lesson, so the
+ *         gap is fixed and it can land off a meeting day · 'date' doesn't move.
  */
 function resolveDue(due, assignIdx, dates){
-  if (isPinned(due)) return { date: due, pinned: true };
-  if (isRelative(due)){
-    const n = Number(due.slice(1));
-    return { date: dates[assignIdx + n] || null, pinned: false };
+  if (isPinned(due)) return { date: due, kind:'date' };
+  if (isRelative(due)) return { date: dates[assignIdx + Number(due.slice(1))] || null, kind:'classes' };
+  if (isDays(due)){
+    const from = dates[assignIdx];
+    return { date: from ? addDays(from, Number(due.slice(1))) : null, kind:'days' };
   }
   return null;
 }
@@ -1104,7 +1271,7 @@ function buildDueIndex(c, dates){
       const r = resolveDue(a.due, i, dates);
       if (!r || !r.date) return;
       if (!map.has(r.date)) map.set(r.date, []);
-      map.get(r.date).push({ text:a.text, from: dates[i] || null, pinned:r.pinned });
+      map.get(r.date).push({ text:a.text, from: dates[i] || null, pinned: r.kind === 'date' });
     });
   });
   return map;
@@ -1113,8 +1280,20 @@ function buildDueIndex(c, dates){
 
 function migrate(data){
   if (!data || !data.courses) return emptyState();
-  if (data.schemaVersion >= 3) return data;
+  /* Read the version as a NUMBER. The oldest files predate the field, and
+     `undefined < 3` is false — which would skip the migration entirely and
+     hand back a v1 file pretending to be current. The old `>= 3` test got
+     this right by accident; an inverted comparison doesn't. */
+  const at = () => Number(data.schemaVersion) || 0;
+  if (at() < 3) migrateTo3(data);
+  if (at() < 4){
+    data.archives = data.archives || [];
+    data.schemaVersion = 4;
+  }
+  return data;
+}
 
+function migrateTo3(data){
   data.courses.forEach(c => {
     if (!c.weekdays) c.weekdays = [...WEEKDAYS];   // old cycleDays don't map; assume all
     delete c.cycleDays;
@@ -1127,7 +1306,6 @@ function migrate(data){
   if (!data.terms)
     data.terms = { mode:'semester', starts: spreadTerms(data.yearStart, data.yearEnd, 2) };
   data.schemaVersion = 3;
-  return data;
 }
 
 const DIRTY_KEY = 'lessonPlanner.dirtySince';
@@ -1162,9 +1340,31 @@ function save(){
 }
 const clone = o => JSON.parse(JSON.stringify(o));
 
+/**
+ * Undo snapshots leave the archive out. Past years are read-only between
+ * rollovers, and the stack holds 60 entries — cloning several dead years on
+ * every edit is the most expensive mistake available in this file. The live
+ * array is re-attached on restore, so undo never sees a gap.
+ *
+ * Rollover is the one change that DOES touch archives, so it banks a `full`
+ * entry instead; see rolloverYear.
+ */
+function snapshot(){
+  const keep = state.archives;
+  state.archives = undefined;
+  const snap = clone(state);
+  state.archives = keep;
+  return snap;
+}
+function restore(snap){
+  snap.archives = state.archives;
+  state = snap;
+}
+
 /** Wrap a mutation so the whole thing becomes ONE undo entry. */
-function commit(label, fn){
-  undoStack.push({ label, snap: clone(state) });
+function commit(label, fn, full){
+  undoStack.push(full ? { label, snap: clone(state), full:true }
+                      : { label, snap: snapshot() });
   if (undoStack.length > 60) undoStack.shift();
   redoStack = [];
   fn();
@@ -1207,9 +1407,12 @@ function undo(){
   if (e.apply){
     redoStack.push({ label:e.label, apply:e.invert, invert:e.apply });
     e.apply();
-  } else {
-    redoStack.push({ label:'', snap: clone(state) });
+  } else if (e.full){
+    redoStack.push({ label:e.label, snap: clone(state), full:true });
     state = e.snap;
+  } else {
+    redoStack.push({ label:'', snap: snapshot() });
+    restore(e.snap);
   }
   invalidateSchedule(); save(); render(); schedulePaneRepaint();
   toast('Undid: ' + (e.label || 'last change'));
@@ -1220,9 +1423,12 @@ function redo(){
   if (e.apply){
     undoStack.push({ label:e.label, apply:e.invert, invert:e.apply });
     e.apply();
-  } else {
-    undoStack.push({ label:'', snap: clone(state) });
+  } else if (e.full){
+    undoStack.push({ label:e.label, snap: clone(state), full:true });
     state = e.snap;
+  } else {
+    undoStack.push({ label:'', snap: snapshot() });
+    restore(e.snap);
   }
   invalidateSchedule(); save(); render(); schedulePaneRepaint();
   toast('Redone');
@@ -1425,8 +1631,12 @@ function renderFirstRun(stage){
 
 function renderViews(){
   const box = $('views'); box.innerHTML = '';
-  VIEWS.forEach(([k,label]) => {
+  const hints = showHints();
+  document.body.classList.toggle('hints', hints);
+  VIEWS.forEach(([k,label], i) => {
     const b = el('button', ui.view === k ? 'on' : '', label);
+    b.title = `${label} view (${i + 1})`;
+    if (hints) b.appendChild(el('kbd','hint', String(i + 1)));
     b.onclick = () => { ui.view = k; render(); };
     box.appendChild(b);
   });
@@ -1434,6 +1644,8 @@ function renderViews(){
 
 function renderTabs(){
   const box = $('tabs'); box.innerHTML = '';
+  /* A single-class user has nothing to switch between — the row is pure cost. */
+  box.style.display = state.courses.length <= 1 ? 'none' : '';
   if (state.courses.length){
     const t = el('button','tab allcls' + (isAll() ? ' on' : ''));
     t.style.setProperty('--c','var(--muted)');
@@ -1444,7 +1656,9 @@ function renderTabs(){
       dots.appendChild(i);
     });
     t.appendChild(dots);
-    t.appendChild(el('span','','All Classes'));
+    /* The label was the widest thing in the row and the dots already say it. */
+    t.title = 'All Classes';
+    t.setAttribute('aria-label','All Classes');
     t.onclick = () => { ui.courseId = ALL; render(); };
     box.appendChild(t);
   }
@@ -1551,24 +1765,40 @@ function todayOnScreen(){
 function renderPeriod(){
   const p = $('period'); p.innerHTML = '';
   const c = isAll() ? null : course();
-  let text = '', badge = '';
+  let lead = '', long = '', short = '';
 
   if (ui.view === 'day'){
-    text  = fmtDay(ui.anchor);
-    badge = weekLabel(ui.anchor, c);
+    lead  = weekLabel(ui.anchor, c);
+    long  = fmtDayLong(ui.anchor);
+    short = fmtDay(ui.anchor);
   } else if (ui.view === 'month'){
     const d = parse(ui.anchor);
-    text  = `${MON[d.getMonth()]} ${d.getFullYear()}`;
-    badge = termAbbr(termOn(ui.anchor, c));
+    lead  = termLong(termOn(ui.anchor, c));
+    long  = `${MON[d.getMonth()]} ${d.getFullYear()}`;
+    short = `${MON[d.getMonth()].slice(0,3)} ${d.getFullYear()}`;
   } else {
     const dates = weekDates(ui.anchor);
-    text  = fmtRange(dates[0], dates[dates.length-1]);
-    badge = weekLabel(dates[0], c);
+    lead  = weekLabel(dates[0], c);
+    long  = fmtRangeLong(dates[0], dates[dates.length-1]);
+    short = fmtRange(dates[0], dates[dates.length-1]);
   }
-  p.appendChild(el('span','', text));
-  if (badge) p.appendChild(el('span','wk', badge));
+  /* weekLabel is empty before the first term start and when the year isn't
+     divided — the date simply becomes the lead, which reads fine. */
+  if (lead) p.appendChild(el('b','lead', lead));
+  /* Both forms are rendered and CSS picks one, so narrowing the window needs
+     no resize listener and no re-render. */
+  p.appendChild(el('span','dt long', long));
+  p.appendChild(el('span','dt short', short));
+  p.appendChild(el('span','cv','▾'));
+  p.setAttribute('aria-label', (lead ? lead + ', ' : '') + long + ' — jump to a date');
 
-  $('today').style.display = todayOnScreen() ? 'none' : '';
+  /* Last in the cluster, so appearing and vanishing moves nothing. It used to
+     sit before the date and take ~72px of gap with it. */
+  const t = $('today');
+  t.textContent = 'Today';
+  t.title = 'Jump to today (T)';
+  if (showHints()) t.appendChild(el('kbd','hint','T'));
+  t.style.display = todayOnScreen() ? 'none' : '';
   paintStorageBadge();
 
   const ob = $('overflow'); ob.innerHTML = '';
@@ -1668,7 +1898,7 @@ function cleanPaste(html){
       if (!keep.includes(a.name)) return n.removeAttribute(a.name);
       if (a.name === 'class' && a.value !== 'cl' && a.value !== 'hw') n.removeAttribute('class');
       if (a.name === 'data-c' && a.value !== '1') n.removeAttribute('data-c');
-      if (a.name === 'data-due' && !isPinned(a.value) && !isRelative(a.value))
+      if (a.name === 'data-due' && !isPinned(a.value) && !isRelative(a.value) && !isDays(a.value))
         n.removeAttribute('data-due');
     });
   });
@@ -1683,7 +1913,7 @@ function dueLabel(due, assignIdx, dates){
   const r = resolveDue(due, assignIdx, dates);
   if (!r) return 'Due…';
   if (!r.date) return 'past end';
-  return (r.pinned ? '\u{1F4CC} ' : '') + fmtMed(r.date);
+  return (r.kind === 'date' ? '\u{1F4CC} ' : '') + fmtMed(r.date);
 }
 
 /** Refresh every pill's rendered label. Display only — data-due is the truth. */
@@ -1758,25 +1988,90 @@ function makeDueCell(lesson, rowId, date, dueIdx){
 }
 
 /** Relative or absolute, in one menu. */
+/** Which block a line is within its cell — the only handle that survives a
+    render(). commit() calls render(), which replaces the whole stage, so a
+    captured node is detached by the time a second click writes through it;
+    the old menu wrote stale HTML back and could silently clobber an edit. */
+function lineIndexIn(cell, line){
+  const blocks = [...cell.querySelectorAll('li,div,p')].filter(n => !n.querySelector('li,div,p'));
+  return blocks.indexOf(line);
+}
+
 function openDueMenu(e, c, lesson, rowId, line, idx, dates){
   const m = $('menu'); m.innerHTML = '';
-  m.appendChild(el('div','sec','Due'));
-  /* Inside the callback: commit snapshots before it runs, so mutating first
-     means undo restores the change it was supposed to revert. */
+  m.classList.add('narrow');
+  const cell = line.closest('.cell');
+  /* paintDuePills can wrap bare text in a div on the live node without that
+     ever reaching lesson.cells, which would put the two out of step. Sync
+     first so the block index means the same thing on both sides. */
+  lesson.cells[rowId] = cell.innerHTML;
+  const lineIdx = lineIndexIn(cell, line);
+
+  /* Address the line by position, not by node reference. */
   const set = v => commit(v === null ? 'Due date cleared' : 'Due date set', () => {
-    if (v === null) line.removeAttribute('data-due');
-    else line.setAttribute('data-due', v);
-    lesson.cells[rowId] = line.closest('.cell').innerHTML;
+    const box = document.createElement('div');
+    box.innerHTML = lesson.cells[rowId] || '';
+    const blocks = [...box.querySelectorAll('li,div,p')].filter(n => !n.querySelector('li,div,p'));
+    const t = blocks[lineIdx];
+    if (!t) return;
+    if (v === null) t.removeAttribute('data-due');
+    else t.setAttribute('data-due', v);
+    lesson.cells[rowId] = box.innerHTML;
   });
-  [[1,'Next class'],[2,'In 2 classes'],[3,'In 3 classes'],[5,'In 5 classes']].forEach(([n,label]) => {
-    const r = resolveDue('+'+n, idx, dates);
-    menuItem(m, label, () => set('+'+n), '', r && r.date ? fmtMed(r.date) : 'past the end');
-  });
+
+  const cur = line.getAttribute('data-due');
+  let unit = isDays(cur) ? 'days' : 'classes';
+  let n = isRelative(cur) ? Number(cur.slice(1)) : isDays(cur) ? Number(cur.slice(1)) : 1;
+  const encode = () => (unit === 'days' ? 'd' : '+') + n;
+
+  /* One commit per burst of stepping, not one per click: 1→5 should be a
+     single ⌘Z. The steps only move a local number, so commit's before-snapshot
+     is still the state as it was when the menu opened. */
+  let pending = 0;
+  const flush = () => { if (pending){ clearTimeout(pending); pending = 0; } set(encode()); };
+  const schedule = () => { clearTimeout(pending); pending = setTimeout(flush, 450); };
+
+  m.appendChild(el('div','sec','Due'));
+
+  const step = el('div','duestep');
+  const minus = el('button','stepbtn','−');
+  const val   = el('div','stepval');
+  const plus  = el('button','stepbtn','+');
+  const sw    = el('div','unitsw');
+  const bClass = el('button','', 'classes');
+  const bDays  = el('button','', 'days');
+  sw.appendChild(bClass); sw.appendChild(bDays);
+  step.appendChild(minus); step.appendChild(val); step.appendChild(plus); step.appendChild(sw);
+  m.appendChild(step);
+
+  const when = el('div','duewhen');
+  m.appendChild(when);
+
+  function paint(){
+    val.textContent = n;
+    minus.disabled = n <= 1;
+    bClass.classList.toggle('on', unit === 'classes');
+    bDays.classList.toggle('on', unit === 'days');
+    const r = resolveDue(encode(), idx, dates);
+    when.textContent = r && r.date ? fmtLong(r.date)
+      : unit === 'days' ? 'past the end of the year' : 'past the end of the class';
+  }
+  const bump = d => { n = Math.max(1, Math.min(60, n + d)); paint(); schedule(); };
+  minus.onclick = () => bump(-1);
+  plus.onclick  = () => bump(1);
+  bClass.onclick = () => { unit = 'classes'; paint(); schedule(); };
+  bDays.onclick  = () => { unit = 'days';    paint(); schedule(); };
+  paint();
+
   m.appendChild(document.createElement('hr'));
-  menuItem(m, 'Pick a date…', () => pickDueDate(line, dates[idx], set), '',
-           'Any day, including one with no class');
-  m.appendChild(document.createElement('hr'));
-  menuItem(m, 'No due date', () => set(null));
+  const pick = menuItem(m, 'Pick a date…', () => { clearTimeout(pending); pending = 0;
+                                                   pickDueDate(line, dates[idx], set); });
+  pick.classList.add('withico');
+  pick.insertBefore(el('span','mico','\u{1F4C5}'), pick.firstChild);
+  const clear = menuItem(m, 'No due date', () => { clearTimeout(pending); pending = 0; set(null); });
+  clear.classList.add('withico');
+  clear.insertBefore(el('span','mico','\u2715'), clear.firstChild);
+
   placeMenu(e);
 }
 
@@ -1974,7 +2269,8 @@ function dayColumn(c, date, idx, hwDates, dueIdx){
 
   const tagrow = el('div','tagrow');
   const pill = el('button','tagpill' + (lesson.tag === 'none' ? ' none' : ''),
-                  lesson.tag === 'none' ? '+ tag' : TAGS[lesson.tag].label);
+                  lesson.tag === 'none' ? '' : TAGS[lesson.tag].label);
+  if (lesson.tag === 'none'){ pill.title = 'Add a tag'; pill.setAttribute('aria-label','Add a tag'); }
   pill.style.setProperty('--t', TAGS[lesson.tag].color);
   pill.onclick = e => { e.stopPropagation(); openTagMenu(e, c, idx, date); };
   /* Status first: "is this ready" is the question being scanned for. */
@@ -2271,7 +2567,8 @@ function renderDay(stage){
   hd.appendChild(el('span','note','lesson #' + (idx+1)));
   hd.appendChild(el('div','spacer'));
   const pill = el('button','tagpill' + (lesson.tag === 'none' ? ' none' : ''),
-                  lesson.tag === 'none' ? '+ tag' : TAGS[lesson.tag].label);
+                  lesson.tag === 'none' ? '' : TAGS[lesson.tag].label);
+  if (lesson.tag === 'none'){ pill.title = 'Add a tag'; pill.setAttribute('aria-label','Add a tag'); }
   pill.style.setProperty('--t', TAGS[lesson.tag].color);
   pill.onclick = e => openTagMenu(e, c, idx, date);
   hd.appendChild(statusPill(c, idx, lesson, true, date));
@@ -2597,20 +2894,106 @@ function renderAllDay(stage){
    ═══════════════════════════════════════════════════════════════════ */
 
 /** At the cursor, or hung under an anchor element when there's one. */
-function placeMenu(e, anchor){
+function placeMenu(e, anchor, align){
   const m = $('menu');
   m.classList.add('on');
   const r = m.getBoundingClientRect();
   let x, y;
   if (anchor){
     const a = anchor.getBoundingClientRect();
-    x = a.right - r.width; y = a.bottom + 6;
+    x = align === 'left' ? a.left : a.right - r.width;
+    y = a.bottom + 6;
   } else {
     x = e.clientX ?? 0; y = e.clientY ?? 0;
   }
   if (x + r.width  > innerWidth  - 8) x = innerWidth  - r.width  - 8;
   if (y + r.height > innerHeight - 8) y = innerHeight - r.height - 8;
   m.style.left = Math.max(8, x) + 'px'; m.style.top = Math.max(8, y) + 'px';
+}
+
+/* ── Jump to a date ──────────────────────────────────────────────────────
+   Clicking the date label opens a month. In week view a whole week lights up
+   and clicking picks a WEEK, because that is what ui.anchor actually selects
+   there. Choosing a date never changes ui.view — same rule as gotoHit. */
+
+let pickerMonth = null;
+
+function openDatePicker(){
+  const m = $('menu'); m.innerHTML = '';
+  m.classList.add('cal');
+  pickerMonth = ui.anchor;
+  paintDatePicker();
+  placeMenu(null, $('period'), 'left');
+}
+
+function paintDatePicker(){
+  const m = $('menu'); m.innerHTML = '';
+  const d = parse(pickerMonth);
+  const y = d.getFullYear(), mo = d.getMonth();
+
+  const hd = el('div','calhd');
+  const back = el('button','calnav','‹');
+  back.title = 'Previous month';
+  back.onclick = () => { pickerMonth = iso(new Date(y, mo - 1, 1)); paintDatePicker(); };
+  const fwd = el('button','calnav','›');
+  fwd.title = 'Next month';
+  fwd.onclick = () => { pickerMonth = iso(new Date(y, mo + 1, 1)); paintDatePicker(); };
+  hd.appendChild(back);
+  hd.appendChild(el('b','', `${MON[mo]} ${y}`));
+  hd.appendChild(fwd);
+  m.appendChild(hd);
+
+  const dows = visibleDows();
+  const grid = el('div','calgrid');
+  grid.style.gridTemplateColumns = `repeat(${dows.length},1fr)`;
+  dows.forEach(w => grid.appendChild(el('em','', DOW3[w].slice(0,1))));
+
+  const first = new Date(y, mo, 1), last = new Date(y, mo + 1, 0);
+  const days = [];
+  for (let dd = new Date(first); dd <= last; dd.setDate(dd.getDate() + 1)){
+    const iso_ = iso(dd);
+    if (dows.includes(dow(iso_))) days.push(iso_);
+  }
+  for (let i = 0; i < (days.length ? dows.indexOf(dow(days[0])) : 0); i++)
+    grid.appendChild(el('span','pad'));
+
+  const today = iso(new Date());
+  const selWeek = ui.view === 'week' ? weekStart(ui.anchor) : null;
+  days.forEach(date => {
+    const cell = el('button','calday', String(parse(date).getDate()));
+    const hol = holidayOn(date);
+    if (hol){ cell.classList.add('hol'); cell.title = hol.reason || 'No school'; }
+    if (date < state.yearStart || date > state.yearEnd) cell.classList.add('out');
+    if (date === today) cell.classList.add('today');
+    if (ui.view === 'week' ? weekStart(date) === selWeek : date === ui.anchor)
+      cell.classList.add('sel');
+    cell.dataset.d = date;
+    cell.dataset.w = weekStart(date);
+    cell.onclick = () => { closeMenu(); ui.anchor = date; daySel = null; render(); };
+    grid.appendChild(cell);
+  });
+
+  /* Week view picks a week, so the whole week should light up as one. */
+  if (ui.view === 'week'){
+    grid.onmouseover = e => {
+      const c = e.target.closest('.calday'); if (!c) return;
+      const w = c.dataset.w;
+      grid.querySelectorAll('.calday').forEach(x => x.classList.toggle('wkhov', x.dataset.w === w));
+    };
+    grid.onmouseleave = () => grid.querySelectorAll('.wkhov')
+      .forEach(x => x.classList.remove('wkhov'));
+  }
+  m.appendChild(grid);
+
+  const ft = el('div','calft');
+  const t = el('button','callink','Today');
+  t.onclick = () => { closeMenu(); ui.anchor = todayAnchor(); daySel = null; render(); };
+  ft.appendChild(t);
+  const lead = ui.view === 'month'
+    ? termLong(termOn(pickerMonth, isAll() ? null : course()))
+    : weekLabel(pickerMonth, isAll() ? null : course());
+  if (lead) ft.appendChild(el('span','calwk', lead));
+  m.appendChild(ft);
 }
 
 /** Short enough to read at a glance. Names only — the sub-labels explained
@@ -2627,7 +3010,7 @@ function openMoreMenu(e){
   menuItem(m, 'Open a backup…', () => $('filepick').click());
   placeMenu(e, $('btnMore'));
 }
-const closeMenu = () => $('menu').classList.remove('on');
+const closeMenu = () => $('menu').classList.remove('on','narrow','cal','preview');
 
 function menuItem(m, label, fn, cls, sub){
   const b = el('button', cls || '');
@@ -2660,6 +3043,15 @@ function openDayMenu(e, c, idx, date){
   menuItem(m, 'Remove day', () => removeDay(c, idx), 'danger', 'Everything after slides back');
   m.appendChild(document.createElement('hr'));
   ncMenuItem(m, c, date);
+  if (daysClip && daysClip.days.length){
+    const n = daysClip.days.length;
+    m.appendChild(document.createElement('hr'));
+    m.appendChild(el('div','sec', `${n} day${n===1?'':'s'} copied from ${daysClip.from}`));
+    menuItem(m, `Insert ${n} day${n===1?'':'s'} here`, () => pasteDays(c, idx, 'insert'),
+             '', 'Everything after shifts forward');
+    menuItem(m, `Replace ${n} day${n===1?'':'s'} from here`, () => pasteDays(c, idx, 'replace'),
+             '', 'Overwrites what\u2019s there; nothing moves');
+  }
   if (state.courses.length > 1){
     m.appendChild(document.createElement('hr'));
     m.appendChild(el('div','sec','Copy this day to'));
@@ -2738,7 +3130,7 @@ function openTagMenu(e, c, idx, date){
 }
 
 document.addEventListener('mousedown', e => {
-  if (!e.target.closest('#menu, #btnMore')) closeMenu();
+  if (!e.target.closest('#menu, #btnMore, #period')) closeMenu();
   if (!e.target.closest('#searchbox')) closeSearch();
 });
 
@@ -2843,6 +3235,9 @@ const PANES = {
   help:   { title:'Help & shortcuts', standalone:true, render: renderHelp },
   export: { title:'Export to Excel',  standalone:true, render: renderExportPanel },
   ai:     { title:'Export for AI',    standalone:true, render: renderAiPanel },
+  rollover: { title:'Start a new school year',
+              summary: () => yearLabel(state.yearStart, state.yearEnd),
+              render: renderRolloverPane },
 };
 
 const panelIsOpen = () => $('panel').classList.contains('on');
@@ -3033,7 +3428,23 @@ function renderSettingsRoot(body){
   const hrow = navRow('holidays', 'Holidays', PANES.holidays.summary());
   hrow.style.marginTop = '4px';
   kg.appendChild(hrow);
+  kg.appendChild(navRow('rollover', 'Start a new school year',
+                        PANES.rollover.summary()));
   body.appendChild(kg);
+
+  const ag = el('div','grp');
+  ag.appendChild(el('label','','Appearance'));
+  const arow = el('div','dayrow');
+  [[false,'Hide'],[true,'Show']].forEach(([v,lab]) => {
+    const chip = el('div','daychip' + (showHints() === v ? ' on' : ''), lab);
+    chip.style.setProperty('--c','var(--accent)');
+    chip.onclick = () => { setHints(v); schedulePaneRepaint(); };
+    arow.appendChild(chip);
+  });
+  ag.appendChild(arow);
+  ag.appendChild(el('div','note',
+    `Shortcut hints on the buttons themselves — ${MODG}K on search, 1/2/3 on the views, T on Today.`));
+  body.appendChild(ag);
 
   const sg = el('div','grp');
   sg.appendChild(navRow('saving', savingTitle(), PANES.saving.summary()));
@@ -3432,6 +3843,169 @@ function renderYearPane(box){
   box.appendChild(yg);
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   A NEW SCHOOL YEAR
+   ───────────────────────────────────────────────────────────────────
+   Cheap, because lessons hold no dates: the ordered list is the asset and
+   it is entirely year-agnostic. Rebuild the dates, keep the plans.
+
+   The outgoing year is kept in the same file, read-only, so search can
+   still reach it — that is what makes last year's units reusable rather
+   than merely archived.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const ARCHIVE_CAP = 3;
+
+function yearLabel(a, b){
+  const y1 = parse(a).getFullYear(), y2 = parse(b).getFullYear();
+  return y1 === y2 ? String(y1) : `${y1}\u2013${String(y2).slice(2)}`;
+}
+
+const archives = () => state.archives || (state.archives = []);
+
+function rolloverYear(newStart, newEnd, keepIds){
+  const dropped = [];
+  const label = yearLabel(newStart, newEnd);
+  /* `full`: this is the one operation that changes the archive, so its undo
+     entry has to carry the archive too or undoing would leave the year
+     reverted and the copy of it still sitting there. */
+  commit(`New school year \u00b7 ${label}`, () => {
+    archives().unshift({
+      id: uid(), label: yearLabel(state.yearStart, state.yearEnd),
+      yearStart: state.yearStart, yearEnd: state.yearEnd,
+      terms: clone(state.terms), holidays: clone(state.holidays),
+      courses: clone(state.courses), lessons: clone(state.lessons),
+    });
+    while (state.archives.length > ARCHIVE_CAP) dropped.push(state.archives.pop().label);
+
+    /* Classes left behind take their lessons with them — otherwise the flat
+       map keeps growing with plans nothing points at. The archived copy still
+       has them. */
+    const keep = new Set(keepIds);
+    state.courses.forEach(c => {
+      if (!keep.has(c.id)) c.lessons.forEach(id => { delete state.lessons[id]; });
+    });
+    state.courses = state.courses.filter(c => keep.has(c.id));
+
+    state.yearStart = newStart;
+    state.yearEnd = newEnd;
+    state.terms = {
+      mode: (state.terms && state.terms.mode) || 'semester',
+      starts: spreadTerms(newStart, newEnd,
+                          (state.terms && state.terms.starts.length) || 2),
+    };
+    /* Next year's breaks are genuinely different dates — carrying them would
+       silently shift every class onto days off that no longer exist. */
+    state.holidays = [];
+
+    state.courses.forEach(c => {
+      c.startDate = newStart; c.endDate = newEnd;
+      /* Both are pinned to last year's dates: harmless arithmetically, but
+         they'd pile up in the class editor as a heap of stale entries. */
+      c.cancelled = []; c.weekRows = [];
+      if (c.terms) c.terms = { mode:c.terms.mode,
+        starts: spreadTerms(newStart, newEnd, c.terms.starts.length) };
+      c.lessons.forEach(id => {
+        const l = state.lessons[id]; if (!l) return;
+        l.status = null;
+        Object.keys(l.cells).forEach(k => { l.cells[k] = scrubForReuse(l.cells[k]); });
+      });
+    });
+    ui.courseId = state.courses[0] ? state.courses[0].id : ALL;
+    /* A year can open on a Saturday. Roll forward to a day that's actually
+       displayed, the same way todayAnchor does. */
+    let a = newStart;
+    for (let i = 0; i < 7 && !isVisibleDay(a); i++) a = addDays(a, 1);
+    ui.anchor = a;
+  }, true);
+  if (dropped.length)
+    toast(`${dropped.join(', ')} dropped \u2014 ${ARCHIVE_CAP} years are kept`);
+}
+
+let rolloverDraft = null;
+
+function renderRolloverPane(box){
+  const backedUp = Number(localStorage.getItem(EXPORT_KEY) || 0);
+  const d = rolloverDraft || (rolloverDraft = {
+    start: iso(new Date(parse(state.yearStart).getFullYear() + 1,
+                        parse(state.yearStart).getMonth(),
+                        parse(state.yearStart).getDate())),
+    end:   iso(new Date(parse(state.yearEnd).getFullYear() + 1,
+                        parse(state.yearEnd).getMonth(),
+                        parse(state.yearEnd).getDate())),
+    keep:  new Set(state.courses.map(c => c.id)),
+  });
+
+  const g = el('div','grp');
+  g.appendChild(el('label','','New year'));
+  [['start','First day'],['end','Last day']].forEach(([k,lab]) => {
+    const row = el('div','addrow');
+    const l = el('span','note', lab);
+    l.style.minWidth = '64px'; l.style.alignSelf = 'center';
+    const inp = document.createElement('input');
+    inp.type = 'date'; inp.value = d[k];
+    inp.onchange = () => { d[k] = inp.value; schedulePaneRepaint(); };
+    row.appendChild(l); row.appendChild(inp);
+    g.appendChild(row);
+  });
+  box.appendChild(g);
+
+  const cg = el('div','grp');
+  cg.appendChild(el('label','','Classes to carry over'));
+  state.courses.forEach(c => {
+    const row = el('button','navrow');
+    row.appendChild(el('span','n', c.name));
+    row.appendChild(el('span','v', d.keep.has(c.id) ? 'Carried over' : 'Left behind'));
+    row.onclick = () => {
+      d.keep.has(c.id) ? d.keep.delete(c.id) : d.keep.add(c.id);
+      schedulePaneRepaint();
+    };
+    cg.appendChild(row);
+  });
+  cg.appendChild(el('div','note',
+    'Lesson plans, rows, colours and meeting days all carry. Dates, holidays, ' +
+    'No Class days, statuses, ticked boxes and pinned due dates do not.'));
+  box.appendChild(cg);
+
+  const ag = el('div','grp');
+  ag.appendChild(el('label','','What happens to this year'));
+  ag.appendChild(el('div','note',
+    `${yearLabel(state.yearStart, state.yearEnd)} is kept in this file, read-only, and stays ` +
+    `searchable — filter search by year to pull a unit forward. ${ARCHIVE_CAP} years are kept.`));
+  if (archives().length){
+    archives().forEach(a => {
+      const row = el('div','note');
+      row.textContent = `${a.label} \u00b7 ${a.courses.length} class${a.courses.length===1?'':'es'} \u00b7 archived`;
+      ag.appendChild(row);
+    });
+  }
+  box.appendChild(ag);
+
+  const go = el('div','grp');
+  if (!backedUp){
+    const warn = el('div','banner');
+    warn.appendChild(el('b','','Back up first'));
+    warn.appendChild(el('div','','This rewrites the current year. Save a file you can come back to.'));
+    const b = el('button','cta','Save a backup file');
+    b.onclick = () => { exportJson(); schedulePaneRepaint(); };
+    warn.appendChild(b);
+    go.appendChild(warn);
+  }
+  const start = el('button','cta', `Start ${yearLabel(d.start, d.end)}`);
+  start.disabled = !backedUp || !d.start || !d.end || d.end <= d.start || !d.keep.size;
+  if (start.disabled) start.style.opacity = '.45';
+  start.onclick = () => {
+    if (!backedUp) return toast('Save a backup first');
+    if (d.end <= d.start) return toast('That year runs backwards');
+    if (!d.keep.size) return toast('Keep at least one class');
+    rolloverYear(d.start, d.end, [...d.keep]);
+    rolloverDraft = null;
+    closePanel();
+  };
+  go.appendChild(start);
+  box.appendChild(go);
+}
+
 function renderWeekendsPane(box){
   const wg = el('div','grp');
   wg.appendChild(el('label','','Weekends'));
@@ -3637,10 +4211,13 @@ function renderHelp(p){
     ['Right-click a day', 'Ends with “Copy this day to” — sends the whole lesson to another class on the same date. Rows are matched by name, and anything missing is named in the message.'],
   ];
   const keys = [
-    ['<kbd>⌘</kbd> <kbd>K</kbd>', 'Search every class'],
+    [`<kbd>${MODG}</kbd> <kbd>K</kbd>`, 'Search every class'],
     ['<kbd>☑</kbd> in a cell', 'Turns the list into a checklist — click a box to tick it. Good for materials.'],
-    ['<kbd>⌘</kbd> <kbd>Z</kbd>', 'Undo — a whole ripple undoes in one press'],
-    ['<kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>Z</kbd>', 'Redo'],
+    [`<kbd>${MODG}</kbd> <kbd>Z</kbd>`, 'Undo — a whole ripple undoes in one press'],
+    [`<kbd>${MODG}</kbd> <kbd>⇧</kbd> <kbd>Z</kbd>`, 'Redo'],
+    [`<kbd>${MODG}</kbd> <kbd>S</kbd>`, 'Save now'],
+    ['<kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>', 'Day, week or month view'],
+    ['<kbd>T</kbd>', 'Jump to today'],
     ['<kbd>Tab</kbd>', 'Next box down the day, then on to the next day'],
     ['<kbd>⌥</kbd> <kbd>←</kbd> <kbd>→</kbd>', 'Same box, previous / next day'],
     ['<kbd>←</kbd> <kbd>→</kbd>', 'Previous / next day, week or month'],
@@ -4082,6 +4659,20 @@ function importJson(file){
 
 let searchHits = [], searchAt = 0;
 
+/* Which class the search is narrowed to. localStorage, not state: everything on
+   state travels in planner.json to the other machine, and "what am I looking
+   through right now" is per-person, not per-file. */
+const SEARCH_FILTER_KEY = 'lessonPlanner.searchFilter';
+let searchFilter = (() => {
+  try { return JSON.parse(localStorage.getItem(SEARCH_FILTER_KEY)) || {}; }
+  catch(e){ return {}; }
+})();
+function setSearchFilter(patch){
+  Object.assign(searchFilter, patch);
+  try { localStorage.setItem(SEARCH_FILTER_KEY, JSON.stringify(searchFilter)); }
+  catch(e){ /* private mode — the filter just won't survive a reload */ }
+}
+
 function snippet(text, needle){
   const at = text.toLowerCase().indexOf(needle);
   if (at < 0) return text.slice(0, 90);
@@ -4089,39 +4680,70 @@ function snippet(text, needle){
   return (s ? '…' : '') + text.slice(s, at + needle.length + 60).trim() + '…';
 }
 
+/* An archived year has its own calendar. meetingDates reads the LIVE year, so
+   it can't be reused — and this runs per keystroke, hence the cache. */
+const _arDates = new Map();
+function archiveDates(ar, c){
+  const key = ar.id + '|' + c.id;
+  if (_arDates.has(key)) return _arDates.get(key);
+  const out = [];
+  for (let d = ar.yearStart; d <= ar.yearEnd; d = addDays(d, 1)){
+    if ((ar.holidays || []).some(h => d >= h.date && d <= (h.endDate || h.date))) continue;
+    if (d < c.startDate || d > c.endDate) continue;
+    if (!c.weekdays.includes(dow(d))) continue;
+    if ((c.cancelled || []).some(x => x.date === d)) continue;
+    out.push(d);
+  }
+  _arDates.set(key, out);
+  return out;
+}
+
 /** Walk course.lessons — never state.lessons, which can hold strays. */
 function runSearch(q){
   const needle = q.trim().toLowerCase();
   if (needle.length < 2) return [];
   const out = [];
-  state.courses.forEach(c => {
-    const dates = meetingDates(c);
+  const only = searchFilter.courseId;
+  const yr = searchFilter.year || '';
+  const ar = yr ? (state.archives || []).find(a => a.id === yr) : null;
+  if (yr && !ar) return [];                       // an archive that aged out
+
+  const scan = (courses, lessons, datesFor, archive) => courses.forEach(c => {
+    if (only && c.id !== only) return;
+    const dates = datesFor(c);
     c.lessons.forEach((id, i) => {
-      const l = state.lessons[id]; if (!l) return;
+      const l = lessons[id]; if (!l) return;
       const parts = [];
       if (l.title) parts.push(l.title);
       c.rows.forEach(r => { const t = htmlToText(l.cells[r.id]); if (t) parts.push(t); });
       const blob = parts.join(' · ');
       if (!blob.toLowerCase().includes(needle)) return;
-      out.push({ course:c, lesson:l, idx:i, date: dates[i] || null,
+      out.push({ course:c, lesson:l, idx:i, date: dates[i] || null, archive,
                  snip: snippet(blob, needle), needle });
     });
   });
+
+  if (ar) scan(ar.courses, ar.lessons, c => archiveDates(ar, c), ar);
+  else    scan(state.courses, state.lessons, meetingDates, null);
+
   out.sort((a,b) => (a.date || '9999') < (b.date || '9999') ? -1 : 1);
   return out.slice(0, 80);
 }
 
 function renderHits(){
-  const box = $('searchHits'); box.innerHTML = '';
+  const box = $('searchHits'), list = $('hitList');
   const q = $('searchInput').value.trim();
   if (!q){ box.classList.remove('on'); return; }
   box.classList.add('on');
+  renderSearchFilters();
+  list.innerHTML = '';
   if (!searchHits.length){
-    box.appendChild(el('div','none', q.length < 2 ? 'Type at least two letters' : 'Nothing found'));
+    list.appendChild(el('div','none', q.length < 2 ? 'Type at least two letters'
+      : searchFilter.courseId ? 'Nothing found in this class' : 'Nothing found'));
     return;
   }
   searchHits.forEach((h, i) => {
-    const row = el('div','hit' + (i === searchAt ? ' on' : ''));
+    const row = el('div','hit');
     const badge = el('div','mc', shortLabel(h.course.name));
     badge.style.setProperty('--c', h.course.color);
     row.appendChild(badge);
@@ -4137,26 +4759,151 @@ function renderHits(){
       s.appendChild(document.createTextNode(h.snip.slice(at + h.needle.length)));
     }
     row.appendChild(s);
-    row.onmouseenter = () => { searchAt = i; renderHits(); };
+    row.onmouseenter = () => { searchAt = i; paintHitSel(); };
     row.onclick = () => gotoHit(h);
-    box.appendChild(row);
+    list.appendChild(row);
   });
-  const on = box.querySelector('.hit.on');
-  if (on) on.scrollIntoView({ block:'nearest' });
+  paintHitSel();
+}
+
+/** Move the highlight between existing rows — never rebuild them.
+    renderHits() used to run on mouseenter, which destroyed the row under the
+    pointer; a click needs mousedown and mouseup on the SAME node, so the first
+    press was swallowed every time and every result took two clicks. */
+function paintHitSel(){
+  if (!searchHits.length) return;
+  const rows = $('hitList').children;
+  for (let i = 0; i < rows.length; i++) rows[i].classList.toggle('on', i === searchAt);
+  if (rows[searchAt]) rows[searchAt].scrollIntoView({ block:'nearest' });
+}
+
+/** The class filter. Rebuilt only when the class list itself changes —
+    replacing a <select> mid-keystroke would drop an open dropdown. */
+function renderSearchFilters(){
+  const bar = $('searchFilters');
+  const sig = state.courses.map(c => c.id + ':' + c.name).join('|') + '#' +
+              (state.archives || []).map(a => a.id + ':' + a.label).join('|');
+  if (bar.dataset.sig !== sig){
+    bar.dataset.sig = sig;
+    bar.innerHTML = '';
+    /* A class the filter pointed at can be deleted, which would otherwise
+       leave the search permanently returning nothing. */
+    if (searchFilter.courseId && !state.courses.some(c => c.id === searchFilter.courseId))
+      setSearchFilter({ courseId:'' });
+
+    const sel = document.createElement('select');
+    sel.className = 'sfilter';
+    sel.setAttribute('aria-label', 'Filter by class');
+    [['', 'All classes']].concat(state.courses.map(c => [c.id, c.name]))
+      .forEach(([v, label]) => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = label;
+        sel.appendChild(o);
+      });
+    const rerun = () => {
+      searchHits = runSearch($('searchInput').value);
+      searchAt = 0;
+      renderHits();
+      $('searchInput').focus();
+    };
+    sel.onchange = () => { setSearchFilter({ courseId: sel.value }); rerun(); };
+    bar.appendChild(sel);
+
+    /* Only worth a control once there is something to choose between. */
+    if ((state.archives || []).length){
+      if (searchFilter.year && !state.archives.some(a => a.id === searchFilter.year))
+        setSearchFilter({ year:'' });            // that archive has aged out
+      const ysel = document.createElement('select');
+      ysel.className = 'sfilter yr';
+      ysel.setAttribute('aria-label','Filter by school year');
+      [['', yearLabel(state.yearStart, state.yearEnd) + ' (this year)']]
+        .concat(state.archives.map(a => [a.id, a.label]))
+        .forEach(([v, label]) => {
+          const o = document.createElement('option');
+          o.value = v; o.textContent = label;
+          ysel.appendChild(o);
+        });
+      ysel.onchange = () => { setSearchFilter({ year: ysel.value }); rerun(); };
+      bar.appendChild(ysel);
+    }
+    bar.appendChild(el('div','sfcount'));
+  }
+  const sel = bar.querySelector('select');
+  const cur = searchFilter.courseId || '';
+  if (sel.value !== cur) sel.value = cur;
+  sel.classList.toggle('set', !!cur);
+  const ysel = bar.querySelector('select.yr');
+  if (ysel){
+    const cy = searchFilter.year || '';
+    if (ysel.value !== cy) ysel.value = cy;
+    ysel.classList.toggle('set', !!cy);
+  }
+  const n = searchHits.length;
+  bar.querySelector('.sfcount').textContent =
+    n ? `${n}${n >= 80 ? '+' : ''} result${n > 1 ? 's' : ''}` : '';
 }
 
 function gotoHit(h){
   closeSearch();
   $('searchInput').blur();
+  /* The views are built on the live year, so there is nowhere to navigate to.
+     Show the day instead, with a way to bring it forward. */
+  if (h.archive) return openArchivePreview(h);
   if (!h.date) return toast('That lesson sits past the end of the year');
-  ui.courseId = h.course.id; ui.anchor = h.date; ui.view = 'day';
+  /* Set the anchor and leave ui.view alone. All three views derive from this
+     one date — weekDates(anchor), monthCells(anchor) — so a week-view search
+     lands on the right week instead of throwing you into day view. */
+  ui.courseId = h.course.id; ui.anchor = h.date;
   daySel = null; render();
 }
 
-function openSearch(){
+/** A day from a past year, read-only, with the one action that matters:
+    copy it into the clipboard the range-paste already reads. */
+function openArchivePreview(h){
+  const m = $('menu'); m.innerHTML = '';
+  m.classList.add('preview');
+  m.appendChild(el('div','sec',
+    `${h.archive.label} · ${h.course.name}${h.date ? ' · ' + fmtMedY(h.date) : ''}`));
+  const body = el('div','pvbody');
+  if (h.lesson.title) body.appendChild(el('div','pvtitle', h.lesson.title));
+  let any = false;
+  h.course.rows.forEach(r => {
+    const t = htmlToText(h.lesson.cells[r.id]);
+    if (!t) return;
+    any = true;
+    body.appendChild(el('div','pvrow', r.label));
+    body.appendChild(el('div','pvtext', t));
+  });
+  if (!any && !h.lesson.title) body.appendChild(el('div','pvtext','Nothing on this day.'));
+  m.appendChild(body);
+  m.appendChild(document.createElement('hr'));
+  menuItem(m, 'Copy this day', () => {
+    const cells = {}, labels = {};
+    h.course.rows.forEach(r => {
+      const html = h.lesson.cells[r.id];
+      if (!html || !htmlToText(html)) return;
+      const k = normLabel(r.label);
+      cells[k] = html; labels[k] = r.label;
+    });
+    daysClip = { from: `${h.course.name} · ${h.archive.label}`,
+                 days: [{ title:h.lesson.title, tag:h.lesson.tag || 'none', cells }], labels };
+    toast('1 day copied — right-click a day to paste it');
+  }, '', 'Then right-click a day in this year to paste it');
+  placeMenu(null, $('searchbox'));
+}
+
+/** Re-runs the query rather than re-showing a stale list — the plan may have
+    changed since it was typed, and old hits that no longer match are worse
+    than no hits. `select` only on ⌘K: selecting all on a plain click would
+    stop you placing the caret. */
+function openSearch(select){
   const inp = $('searchInput');
-  inp.focus(); inp.select();
-  if (searchHits.length) $('searchHits').classList.add('on');
+  inp.focus();
+  if (select) inp.select();
+  if (!inp.value.trim()) return;
+  searchHits = runSearch(inp.value);
+  searchAt = 0;
+  renderHits();
 }
 function closeSearch(){
   $('searchHits').classList.remove('on');
@@ -4221,6 +4968,107 @@ function copyDayTo(from, idx, to, date){
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   COPYING A RANGE OF DAYS
+   ───────────────────────────────────────────────────────────────────
+   The unit of reuse is a run of days, and the only stable coordinate in
+   this model is the sequence index — so the clipboard is built from the
+   shift-click selection that already exists.
+
+   Cells are keyed by row LABEL, not row id: ids are per-class and shared
+   with nothing, so a label is the only thing that means the same on both
+   sides. Same normalisation copyDayTo already uses.
+   ═══════════════════════════════════════════════════════════════════ */
+
+let daysClip = null;             // { from, days:[{ title, tag, cells:{label:html} }] }
+
+const normLabel = s => String(s || '').trim().toLowerCase();
+
+const isBlankLesson = l =>
+  !l || (!l.title && (!l.tag || l.tag === 'none') && !l.status &&
+         !Object.values(l.cells || {}).some(h => htmlToText(h)));
+
+/** Strip what shouldn't survive being reused somewhere else. Both relative
+    due forms stay — each re-resolves against wherever the lesson lands — but
+    a pinned date meant one specific day of one specific year. */
+function scrubForReuse(html){
+  const box = document.createElement('div');
+  box.innerHTML = html || '';
+  box.querySelectorAll('li[data-c]').forEach(li => li.removeAttribute('data-c'));
+  box.querySelectorAll('[data-due]').forEach(n => {
+    if (isPinned(n.getAttribute('data-due'))) n.removeAttribute('data-due');
+  });
+  box.querySelectorAll('[data-dueon]').forEach(n => n.removeAttribute('data-dueon'));
+  return box.innerHTML;
+}
+
+function copySelection(){
+  const r = selRange(); if (!r) return;
+  const c = state.courses.find(x => x.id === daySel.courseId); if (!c) return;
+  let [a, b] = r;
+  /* ensureLesson appends blank lessons as a side effect of RENDERING, so
+     browsing to the end of a class inflates lessons.length. Trailing blanks in
+     a range are that artefact, not something anyone meant to copy. */
+  while (b > a && isBlankLesson(state.lessons[c.lessons[b]])) b--;
+
+  const days = [], labels = {};
+  for (let i = a; i <= b; i++){
+    const l = state.lessons[c.lessons[i]];
+    const cells = {};
+    c.rows.forEach(row => {
+      const html = l && l.cells[row.id];
+      if (!html || !htmlToText(html)) return;
+      const key = normLabel(row.label);
+      cells[key] = html;
+      labels[key] = row.label;        // matching is normalised; reporting isn't
+    });
+    days.push({ title: l ? l.title : '', tag: l ? (l.tag || 'none') : 'none', cells });
+  }
+  daysClip = { from: c.name, days, labels };
+  clearSelection();
+  toast(`${days.length} day${days.length === 1 ? '' : 's'} copied from ${c.name}`);
+}
+
+/**
+ * @param mode 'insert' splices and ripples · 'replace' overwrites from `at`.
+ * One commit for the whole range — a loop of single-day copies would push a
+ * snapshot each, blow the 60-entry undo stack in one gesture, and fire a toast
+ * and a render per day.
+ */
+function pasteDays(c, at, mode){
+  if (!daysClip || !daysClip.days.length) return;
+  const byLabel = new Map(c.rows.map(r => [normLabel(r.label), r.id]));
+  const missing = new Set();
+  const built = daysClip.days.map(d => {
+    const cells = {};
+    Object.entries(d.cells).forEach(([label, html]) => {
+      const rid = byLabel.get(label);
+      if (rid) cells[rid] = scrubForReuse(html);
+      else missing.add((daysClip.labels && daysClip.labels[label]) || label);
+    });
+    return { title:d.title, tag:d.tag, cells };
+  });
+
+  const n = built.length;
+  /* Aggregated once, not once per day — twenty days missing the same row
+     should say so a single time. */
+  const note = missing.size ? ` · no row for ${[...missing].join(', ')}` : '';
+  commit(`${n} day${n === 1 ? '' : 's'} ${mode === 'insert' ? 'inserted into' : 'pasted into'} ${c.name}${note}`, () => {
+    const ids = built.map(b => {
+      const id = uid();
+      state.lessons[id] = { id, title:b.title, tag:b.tag, status:null, cells:b.cells };
+      return id;
+    });
+    if (mode === 'insert') c.lessons.splice(at, 0, ...ids);
+    else {
+      /* Replace wants exactly these n slots to exist. copyDayTo's merge
+         semantics are wrong here — a range paste overwrites. */
+      ensureLesson(c, at + n - 1);
+      for (let k = 0; k < n; k++) c.lessons[at + k] = ids[k];
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    DAY SELECTION — shift-click a run, then tag it in one go
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -4268,6 +5116,10 @@ function paintSelection(){
   const clr = el('button','ghost','Clear tag');
   clr.onclick = () => tagSelection('none');
   bar.appendChild(clr);
+  const cp = el('button','ghost','Copy');
+  cp.title = 'Copy these days, then right-click a day in any class to paste them';
+  cp.onclick = () => copySelection();
+  bar.appendChild(cp);
   const done = el('button','ghost','Done');
   done.onclick = () => clearSelection();
   bar.appendChild(done);
@@ -4730,14 +5582,19 @@ function reconnectPill(){
   return b;
 }
 
-/* Folder mode. Always visible, so "is it saving?" never has to be asked. */
+/* Folder mode. Always visible, so "is it saving?" never has to be asked —
+   but when the answer is simply "yes", a dot says it. The words come back the
+   moment there is something to report, and they grow at the right edge, so
+   nothing else in the bar moves. The folder name lives in Settings now. */
 function folderStatusPill(){
   const bad = storageState === 'error', busy = storageState === 'saving';
-  const b = el('button','savepill ' + (bad ? 'warn' : busy ? 'busy' : 'ok'));
+  const quiet = !bad && !busy;
+  const b = el('button','savepill ' + (bad ? 'warn' : busy ? 'busy' : 'ok') + (quiet ? ' dotonly' : ''));
   b.appendChild(el('span','dot'));
-  b.appendChild(el('span','t', bad ? 'Not saving' : busy ? 'Saving…' : savedLabel(lastSavedAt)));
-  b.title = (bad ? 'The last save failed. ' : '') +
-    `Click or ⌘S to save now — ${dirHandle.name}/${PLANNER_FILE}` +
+  if (!quiet) b.appendChild(el('span','t', bad ? 'Not saving' : 'Saving…'));
+  else b.setAttribute('aria-label', savedLabel(lastSavedAt));
+  b.title = (bad ? 'The last save failed. ' : quiet ? savedLabel(lastSavedAt) + '. ' : '') +
+    `Click or ${MODK}S to save now — ${dirHandle.name}/${PLANNER_FILE}` +
     (state.lastWrittenBy && state.lastWrittenBy !== MACHINE
       ? `\nLast written by ${state.lastWrittenBy}` : '');
   /* A status you can act on. Clicking a thing that says "Saved" and being
@@ -4918,6 +5775,11 @@ $('prev').onclick = () => step(-1);
 $('next').onclick = () => step(1);
 $('today').onclick = () => { ui.anchor = todayAnchor(); render(); };
 $('btnMore').onclick = openMoreMenu;
+$('period').onclick = () => {
+  const m = $('menu');
+  if (m.classList.contains('on') && m.classList.contains('cal')) return closeMenu();
+  openDatePicker();
+};
 
 /* Drives the Back up escalation. Guarded so it costs nothing the rest of the time. */
 setInterval(() => { if (!dirHandle && dirtySince) paintStorageBadge(); }, 60000);
@@ -4950,6 +5812,14 @@ const inEditor = () => {
   const a = document.activeElement;
   return !!a && (a.isContentEditable || a.tagName === 'INPUT' || a.tagName === 'TEXTAREA');
 };
+/* A <select> isn't text entry, so inEditor() rightly ignores it — but it does
+   eat keystrokes, because typing jumps to the option that starts with them.
+   Bare-letter shortcuts have to stand off it too, or picking a search filter
+   and typing to find a class would switch the view out from under you. */
+const inControl = () => {
+  const a = document.activeElement;
+  return inEditor() || (!!a && a.tagName === 'SELECT');
+};
 
 document.addEventListener('keydown', e => {
   const mod = e.metaKey || e.ctrlKey;
@@ -4957,14 +5827,14 @@ document.addEventListener('keydown', e => {
   /* Search — ⌘K anywhere, or "/" when you're not typing into something. */
   if ((mod && e.key.toLowerCase() === 'k') || (!mod && !inEditor() && e.key === '/')){
     e.preventDefault();
-    return searchIsOpen() ? closeSearch() : openSearch();
+    return searchIsOpen() ? closeSearch() : openSearch(true);
   }
   if (searchIsOpen()){
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
       e.preventDefault();
       if (!searchHits.length) return;
       searchAt = (searchAt + (e.key === 'ArrowDown' ? 1 : -1) + searchHits.length) % searchHits.length;
-      return renderHits();
+      return paintHitSel();
     }
     if (e.key === 'Enter'){
       e.preventDefault();
@@ -5008,6 +5878,22 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft')  step(-1);
     if (e.key === 'ArrowRight') step(1);
   }
+
+  /* Views and Today. Gated so they never fire mid-sentence — typing "the" in
+     a cell must not jump the whole app to today. */
+  if (!mod && !e.altKey && !inControl()){
+    const v = VIEWS[Number(e.key) - 1];
+    if (v && e.key >= '1' && e.key <= '9'){
+      e.preventDefault();
+      ui.view = v[0]; render();
+      return;
+    }
+    if (e.key.toLowerCase() === 't'){
+      e.preventDefault();
+      ui.anchor = todayAnchor(); render();
+      return;
+    }
+  }
 });
 
 $('searchInput').addEventListener('input', () => {
@@ -5015,6 +5901,18 @@ $('searchInput').addEventListener('input', () => {
   searchAt = 0;
   renderHits();
 });
+
+/* There was no focus handler at all. openSearch() only ever ran from ⌘K, so
+   clicking out and back into the box left the panel shut with the query still
+   sitting in the field. */
+$('searchInput').addEventListener('focus', () => openSearch(false));
+
+/* Labels that name a modifier are written once, from the platform. */
+$('kbdSearch').textContent = MODK + 'K';
+document.querySelectorAll('[data-mod]').forEach(b => {
+  b.title = `${b.title} (${MODK}${b.dataset.mod})`;
+});
+document.body.classList.toggle('hints', showHints());
 
 render();
 restoreFolder().then(maybePromptStorage, maybePromptStorage);

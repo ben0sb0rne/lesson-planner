@@ -439,4 +439,60 @@ just change the lessons." Preview and undo cover the real need.
 
 ---
 
+## 8d. Last year lives in this year's file
+
+Rollover could have been the cheapest feature in the app. Lessons hold no dates, so carrying a
+class forward is just: keep the ordered list, rebuild the calendar underneath it. The first design
+did exactly that and **replaced** the outgoing year, with an exported backup as the archive.
+
+That fell over on one requirement — *filter search by school year.* You cannot search a year that
+isn't in the file. And a backup you have to go and open is not something anyone reaches for in
+October when they half-remember how they taught photosynthesis last time.
+
+So the outgoing year is kept **in the same file, read-only**, capped at three. Which turns the
+feature into something better than rollover: search a past year, preview a day, copy it, paste it
+into this one. Reuse across years falls out of the range-copy that already existed, rather than
+needing a feature of its own.
+
+**Archived years are deliberately outside the undo system.** `commit()` snapshots the whole state
+before every change and the stack holds 60 entries; cloning three dead years on every keystroke-
+adjacent edit would be the most expensive mistake available in this file. `snapshot()` omits
+`archives` and `restore()` re-attaches the live array, which is safe precisely because archives
+never change between rollovers.
+
+Rollover is the one operation that *does* change them, so it banks a `full` entry that carries the
+archive too — otherwise undoing a rollover would put the year back and leave a copy of it sitting
+there as well. This is the same class of bug as the captured-node problem in §5: the fast path and
+the correct path differ in exactly one rare case, and that case has to be named explicitly.
+
+**A backup is still required before it runs.** Rollover rewrites the live year and can drop the
+oldest archive. Cheap to demand, and the one moment where a year of work is genuinely at stake.
+
+---
+
+## 8e. What has to be on screen at all times
+
+The top bar reached three rows by accumulation — every feature added its control next to the last
+one, and nothing was ever weighed against anything else. The rebuild started from one question:
+*what must be visible at all times?*
+
+Five things: which view you're in, where you are, how to move, which class, and whether your work
+is saved. Everything else only has to be **reachable** — search has ⌘K and an icon, settings and
+exports have a menu, help has a key, the week number is context rather than an action.
+
+That inventory is what removed the brand wordmark, the folder name, the spelled-out "Search", the
+standalone `?` icon and the `⌘K` badge. None of them were wrong; they were all simply resident
+without having earned it.
+
+Two measured defects went with it. The switcher was never centred — two `flex:1` spacers only
+centre when what flanks them matches, and the search box grew 90px on focus, sliding the switcher
+mid-keystroke. It's a `1fr auto 1fr` grid now, and the box has one width. And Today sat *before*
+the date, so hiding it took ~72px of gap with it and shunted the date sideways every time you
+crossed the boundary; it sits last in its cluster now, where appearing and vanishing costs nothing.
+
+The one thing that grew rather than shrank: the week number, promoted out of an 8px uppercase
+badge to lead the date at full size, because it's the thing Ben actually navigates by.
+
+---
+
 See [ROADMAP.md](ROADMAP.md) for build order.
