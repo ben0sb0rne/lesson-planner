@@ -1236,15 +1236,59 @@ function resolveDue(due, assignIdx, dates){
   return null;
 }
 
+const isLineBlock = n => n.nodeType === 1 && /^(DIV|P|LI)$/.test(n.tagName);
+const isListBox   = n => n.nodeType === 1 && /^(UL|OL)$/.test(n.tagName);
+
+/**
+ * Force every line in a cell to be a real block. MUTATES `root`.
+ *
+ * contenteditable leaves the first line of an empty cell as a bare text node
+ * and only wraps it if something later forces the issue. Type an assignment,
+ * press Enter, type a second one, and Chrome leaves `text<div>text</div>` —
+ * where line one is not an element at all, so it can carry neither the due
+ * pill nor a data-due. That shape is permanent: it survives blur, re-render
+ * and reload, because the old wrap guard only fired when the cell contained
+ * NO blocks, and by then it contained one.
+ *
+ * So the first homework of a day silently couldn't be given a due date, and
+ * assignmentsIn dropped it from the due index entirely.
+ */
+function wrapLooseLines(root){
+  let run = [];
+  const flush = () => {
+    if (run.length && run.some(n => (n.textContent || '').trim())){
+      const d = document.createElement('div');
+      run[0].parentNode.insertBefore(d, run[0]);
+      run.forEach(n => d.appendChild(n));
+    }
+    run = [];
+  };
+  [...root.childNodes].forEach(n => {
+    if (isLineBlock(n) || isListBox(n)) flush();
+    /* A top-level <br> is a line break with no element to hang a pill on.
+       Each line here is its own assignment, so split rather than absorb. */
+    else if (n.nodeType === 1 && n.tagName === 'BR'){ flush(); n.remove(); }
+    else run.push(n);
+  });
+  flush();
+}
+
+/** The blocks that count as lines. Shared, so the painter, the due index and
+    the due menu can't drift apart on what "line 2" means. */
+const lineBlocksIn = root =>
+  [...root.querySelectorAll('li,div,p')].filter(n => !n.querySelector('li,div,p'));
+
 /** Every assignment line in a cell, with its raw due value. */
 function assignmentsIn(html){
   if (!html) return [];
   const box = document.createElement('div');
   box.innerHTML = html;
-  const blocks = [...box.querySelectorAll('li,div,p')].filter(n => !n.querySelector('li,div,p'));
-  const nodes = blocks.length ? blocks : (box.textContent.trim() ? [box] : []);
-  return nodes.map(n => ({ text: (n.textContent || '').trim(), due: n.getAttribute('data-due') }))
-              .filter(a => a.text);
+  /* A detached copy — normalising here fixes the reading without rewriting
+     anything stored. */
+  wrapLooseLines(box);
+  return lineBlocksIn(box)
+    .map(n => ({ text: (n.textContent || '').trim(), due: n.getAttribute('data-due') }))
+    .filter(a => a.text);
 }
 
 /**
@@ -1917,17 +1961,36 @@ function dueLabel(due, assignIdx, dates){
 }
 
 /** Refresh every pill's rendered label. Display only — data-due is the truth. */
+/* Re-entrancy guard: execCommand fires an input event, which is what calls
+   paintDuePills in the first place. */
+let wrappingCaretLine = false;
+
+/** Wrap just the line the caret is on. Moving nodes around a live selection
+    loses it; execCommand does the same wrap natively and keeps the caret
+    where it was, which is why the focused case gets its own path. */
+function wrapCaretLine(cell){
+  if (wrappingCaretLine) return;
+  const sel = getSelection();
+  if (!sel || !sel.rangeCount) return;
+  let n = sel.getRangeAt(0).startContainer;
+  if (!cell.contains(n) || n === cell) return;
+  while (n && n.parentNode && n.parentNode !== cell) n = n.parentNode;
+  if (!n || n.parentNode !== cell || isLineBlock(n) || isListBox(n)) return;
+  wrappingCaretLine = true;
+  try { document.execCommand('formatBlock', false, 'div'); }
+  catch(e){ /* no formatBlock: the blur repaint still settles it */ }
+  finally { wrappingCaretLine = false; }
+}
+
 function paintDuePills(cell, assignIdx, dates){
-  /* A bare text node can't carry an attribute, and innerHTML wouldn't
-     serialise one set on the cell itself — so give every line a real block.
-     Never while the cell has focus: rewrapping would move the caret. */
+  /* A bare text node can't carry an attribute, so every line needs to be a
+     real block before it can have a pill. Restructuring under a live caret
+     would lose the selection, so a focused cell only fixes the line being
+     typed; everything else settles on blur. */
   const focused = document.activeElement === cell || cell.contains(document.activeElement);
-  if (!focused && !cell.querySelector('li,div,p') && cell.textContent.trim()){
-    const d = document.createElement('div');
-    while (cell.firstChild) d.appendChild(cell.firstChild);
-    cell.appendChild(d);
-  }
-  const blocks = [...cell.querySelectorAll('li,div,p')].filter(n => !n.querySelector('li,div,p'));
+  if (focused) wrapCaretLine(cell);
+  else wrapLooseLines(cell);
+  const blocks = lineBlocksIn(cell);
   blocks.forEach(n => {
     const txt = (n.textContent || '').trim();
     if (!txt){ n.removeAttribute('data-dueon'); n.classList.remove('hwline'); return; }
@@ -1947,6 +2010,9 @@ function makeAssignedCell(c, lesson, rowId, idx, dates){
   repaint();
   const onInput = cell.oninput;
   cell.oninput = () => { onInput(); repaint(); };
+  /* Anything the focused path couldn't restructure gets fixed up the instant
+     the caret leaves, rather than waiting for the next full render. */
+  cell.addEventListener('blur', repaint);
   cell.addEventListener('click', e => {
     const line = e.target.closest('.hwline');
     if (!line || !cell.contains(line)) return;
@@ -1993,8 +2059,7 @@ function makeDueCell(lesson, rowId, date, dueIdx){
     captured node is detached by the time a second click writes through it;
     the old menu wrote stale HTML back and could silently clobber an edit. */
 function lineIndexIn(cell, line){
-  const blocks = [...cell.querySelectorAll('li,div,p')].filter(n => !n.querySelector('li,div,p'));
-  return blocks.indexOf(line);
+  return lineBlocksIn(cell).indexOf(line);
 }
 
 function openDueMenu(e, c, lesson, rowId, line, idx, dates){
@@ -2011,8 +2076,8 @@ function openDueMenu(e, c, lesson, rowId, line, idx, dates){
   const set = v => commit(v === null ? 'Due date cleared' : 'Due date set', () => {
     const box = document.createElement('div');
     box.innerHTML = lesson.cells[rowId] || '';
-    const blocks = [...box.querySelectorAll('li,div,p')].filter(n => !n.querySelector('li,div,p'));
-    const t = blocks[lineIdx];
+    wrapLooseLines(box);                 // same normalisation the live cell had
+    const t = lineBlocksIn(box)[lineIdx];
     if (!t) return;
     if (v === null) t.removeAttribute('data-due');
     else t.setAttribute('data-due', v);

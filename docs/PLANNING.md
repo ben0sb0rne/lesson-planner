@@ -470,6 +470,31 @@ oldest archive. Cheap to demand, and the one moment where a year of work is genu
 
 ---
 
+## 8d-ii. Every homework line must be a real block
+
+A due-date pill is a `::after` on the line, and the due date itself is a `data-due` attribute on
+it. Both need an **element**. A bare text node can hold neither.
+
+contenteditable doesn't cooperate. Typing into an empty cell leaves the first line as a bare text
+node, and Chrome only wraps it once something else forces the issue — so the ordinary way of
+filling the row (type, Enter, type) leaves `text<div>text</div>`. The original guard only wrapped
+when the cell contained *no* blocks, which by then was false, so line one stayed loose **for
+good**: no pill, no way to give it a due date, and `assignmentsIn` dropped it from the due index
+outright. The first homework of the day silently couldn't be scheduled.
+
+The invariant now has one owner, `wrapLooseLines`, which groups top-level inline runs into blocks
+and splits on top-level `<br>`. Three callers depend on it agreeing with itself — the pill
+painter, the due index, and the due menu's line addressing — so they all take their line list from
+`lineBlocksIn`.
+
+Restructuring under a live caret loses the selection, so a focused cell takes a different route:
+`execCommand('formatBlock')` wraps just the line being typed and preserves the caret natively.
+Anything it couldn't reach settles on blur. Reading is normalised on a **detached clone**, so a
+file with the old shape reports correctly without anything being rewritten behind the user's back;
+the stored HTML repairs itself the next time that cell is touched.
+
+---
+
 ## 8e. What has to be on screen at all times
 
 The top bar reached three rows by accumulation — every feature added its control next to the last
