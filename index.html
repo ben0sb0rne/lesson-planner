@@ -5900,7 +5900,57 @@ function renderAiPanel(p){
    Firefox) that mirror is the only copy and the panel says so.
    ═══════════════════════════════════════════════════════════════════ */
 
-const CAN_FS = typeof window.showDirectoryPicker === 'function';
+/* Running inside the native shell, which can reach the filesystem directly.
+   Null in an ordinary browser, and everything below falls back to the File
+   System Access API exactly as before. */
+const SHELL = window.planner || null;
+const SHELL_DIR_KEY = 'lessonPlanner.shellFolder';
+
+const CAN_FS = !!SHELL || typeof window.showDirectoryPicker === 'function';
+
+/**
+ * A FileSystemDirectoryHandle, near enough.
+ *
+ * The whole storage layer — atomic writes, the dated backups, the revision
+ * check — is written against that interface, and it is the most carefully
+ * tested code in this file. Rather than fork it, the shell presents the same
+ * shape over a path. Nothing downstream knows the difference.
+ */
+function shellDir(path){
+  const at = name => path.replace(/\/+$/,'') + '/' + name;
+  return {
+    name: path.split('/').filter(Boolean).pop() || path,
+    path,
+    async getFileHandle(name, opts){
+      const full = at(name);
+      /* The real API rejects for a file that isn't there, and loadFromFolder
+         leans on that to tell "empty folder" from "existing plans". */
+      if (!opts || !opts.create){
+        if (!await SHELL.exists(full)) throw new DOMException('not found', 'NotFoundError');
+      }
+      return {
+        name,
+        async getFile(){
+          const text = await SHELL.readFile(full);
+          return { text: async () => text };
+        },
+        async createWritable(){
+          let buf = '';
+          return {
+            write: t => { buf += t; },
+            close: () => SHELL.writeFile(full, buf),   // writes atomically
+          };
+        },
+      };
+    },
+    async getDirectoryHandle(name){ return shellDir(at(name)); },
+    async *entries(){
+      const items = await SHELL.listFolder(path).catch(() => []);
+      for (const it of items) yield [it.name, null];
+    },
+    removeEntry(name){ return SHELL.remove(at(name)); },
+  };
+}
 const PLANNER_FILE = 'planner.json';
 const READABLE_FILE = 'plans-readable.json';
 const REV_KEY = 'lessonPlanner.revision';
@@ -6044,6 +6094,34 @@ async function loadFromFolder(){
 
 async function chooseFolder(){
   if (!CAN_FS) return toast('This browser can’t save to a folder');
+
+  /* In the shell there is no picker to be denied and no permission to
+     re-grant later — a path is a path. */
+  if (SHELL){
+    let picked;
+    try { picked = await SHELL.chooseFolder(); } catch(e){ picked = null; }
+    if (!picked || !picked.path) return;                 // dialog dismissed
+    try {
+      dirHandle = shellDir(picked.path);
+      localStorage.setItem(SHELL_DIR_KEY, picked.path);
+      const existing = await SHELL.exists(picked.path + '/' + PLANNER_FILE);
+      if (existing && state.courses.length){
+        const useFile = confirm(
+          'That folder already has a planner file.\n\n' +
+          'OK — open it and replace what\'s on screen.\n' +
+          'Cancel — keep what\'s on screen and overwrite the file.');
+        if (!useFile) await flushToFolder(); else await loadFromFolder();
+      } else if (existing) await loadFromFolder();
+      else await flushToFolder();
+      setupDone();
+      toast('Saving to your folder');
+    } catch(e){
+      console.warn(e); dirHandle = null; setStorage('error');
+      toast('Could not use that folder');
+    }
+    return repaintPane();
+  }
+
   let h;
   try {
     h = await window.showDirectoryPicker({ id:'lessonPlannerData', mode:'readwrite' });
@@ -6081,6 +6159,7 @@ async function chooseFolder(){
 
 async function forgetFolder(){
   dirHandle = null; pendingHandle = null;
+  localStorage.removeItem(SHELL_DIR_KEY);
   await idbSet('dir', null).catch(() => {});
   localStorage.removeItem(REV_KEY);
   setStorage('none');
@@ -6103,6 +6182,21 @@ async function reconnectFolder(){
 /** On boot: reattach silently if permission survived, else offer a button. */
 async function restoreFolder(){
   if (!CAN_FS) return;
+
+  /* The shell just reopens the path. No stored handle, no permission that
+     lapsed overnight, no Reconnect button — the reason that machinery exists
+     is the browser's, not the filesystem's. */
+  if (SHELL){
+    const path = localStorage.getItem(SHELL_DIR_KEY);
+    if (!path) return;
+    if (!await SHELL.exists(path).catch(() => false)){
+      setStorage('error');
+      return toast('Your plans folder has moved or is offline');
+    }
+    dirHandle = shellDir(path);
+    return loadFromFolder();
+  }
+
   let h = null;
   try { h = await idbGet('dir'); } catch(e){ return; }
   if (!h) return;

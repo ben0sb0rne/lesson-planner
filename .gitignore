@@ -7,3 +7,6 @@ plans-readable.json
 backups/
 lesson-planner-*.json
 *.xlsx
+
+# The built shell app — rebuild it with shell/build.sh
+shell/dist/
