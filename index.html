@@ -149,17 +149,34 @@ body.dragging *{cursor:grabbing!important}
 .savepill.dotonly{padding:0; width:24px; height:24px; justify-content:center;
   border-color:transparent; margin-right:2px}
 .savepill.dotonly:hover{border-color:var(--border)}
-.savepill .sicon{
-  width:15px; height:15px; flex:0 0 auto; fill:none; stroke:currentColor;
-  stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; color:var(--ok);
-}
-/* The click landed — say so, then fold back to the tick. */
-.savepill.confirm{
-  color:var(--ok); border-color:color-mix(in srgb,var(--ok) 45%,transparent);
-  background:color-mix(in srgb,var(--ok) 10%,transparent);
-}
 .savepill:active{transform:scale(.94)}
 .savepill{transition:transform .08s ease, background .12s, border-color .12s}
+
+/* Writing. The ring is the same 14px whatever it's reporting, so the search
+   box beside it never moves. */
+.savepill .spin{
+  width:14px; height:14px; flex:0 0 auto; border-radius:50%;
+  border:2px solid color-mix(in srgb,var(--ok) 22%,transparent);
+  border-top-color:var(--ok); animation:savespin .62s linear infinite;
+}
+@keyframes savespin{to{transform:rotate(360deg)}}
+
+/* Written. The tick draws itself on rather than appearing — the movement is
+   what reads as confirmation. */
+.savepill .savecheck{
+  width:15px; height:15px; flex:0 0 auto; fill:none; stroke:var(--ok);
+  stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round;
+}
+.savepill .savecheck path{
+  stroke-dasharray:24; stroke-dashoffset:24;
+  animation:savedraw .28s cubic-bezier(.4,0,.2,1) forwards;
+}
+@keyframes savedraw{to{stroke-dashoffset:0}}
+
+@media (prefers-reduced-motion:reduce){
+  .savepill .spin{animation:none; border-top-color:var(--ok); opacity:.8}
+  .savepill .savecheck path{animation:none; stroke-dashoffset:0}
+}
 .savepill .dot{width:7px; height:7px; border-radius:50%; background:currentColor; flex:0 0 auto}
 .savepill .sub{color:var(--faint); font-weight:500; min-width:0; overflow:hidden; text-overflow:ellipsis}
 .savepill .sub::before{content:'· '}
@@ -6211,15 +6228,19 @@ async function restoreFolder(){
 
 const daysSince = ts => ts ? Math.floor((Date.now() - Number(ts)) / 86400000) : Infinity;
 
-function paintStorageBadge(){
+function paintStorageBadge(force){
   const box = $('storage'); if (!box) return;
-  /* A minute tick must not yank focus off the button under the cursor. */
-  if (box.contains(document.activeElement)) return;
+  const hadFocus = box.contains(document.activeElement);
+  /* A minute tick must not yank focus off the button under the cursor — but
+     clicking this control focuses it, and the spin-then-tick that follows is
+     a response to that click. Those repaints have to get through. */
+  if (hadFocus && !force) return;
   box.innerHTML = '';
   box.appendChild(
     storageState === 'reconnect' ? reconnectPill() :
     dirHandle                    ? folderStatusPill()
                                  : backupPill());
+  if (hadFocus){ const b = box.querySelector('button'); if (b) b.focus(); }
 }
 
 /* A remembered folder that lost permission. Not the backup button — the right
@@ -6234,25 +6255,37 @@ function reconnectPill(){
   return b;
 }
 
-/* Folder mode. Always visible, so "is it saving?" never has to be asked —
-   but when the answer is simply "yes", a dot says it. The words come back the
-   moment there is something to report, and they grow at the right edge, so
-   nothing else in the bar moves. The folder name lives in Settings now. */
+/* Folder mode. Always visible, so "is it saving?" never has to be asked.
+   One fixed 24px square, whatever it has to say — this sits immediately left
+   of the search box in a cluster that grows leftward, so anything that
+   changes width here shoves the search box while you're looking at it. */
 function folderStatusPill(){
-  const bad = storageState === 'error', busy = storageState === 'saving';
-  /* Hold the confirmation open for a moment after a click. Saving is usually
-     instant, so without this the button visibly did nothing at all. */
-  const confirming = !bad && !busy && Date.now() - justSavedAt < 1600;
-  const quiet = !bad && !busy && !confirming;
-  const b = el('button','savepill ' + (bad ? 'warn' : busy ? 'busy' : 'ok')
-                       + (quiet ? ' dotonly' : '') + (confirming ? ' confirm' : ''));
-  /* A bare dot said nothing about what it was. A tick does. */
-  b.appendChild(bad || busy ? el('span','dot') : icon('checkDot','sicon'));
-  if (bad || busy) b.appendChild(el('span','t', bad ? 'Not saving' : 'Saving…'));
-  else if (confirming) b.appendChild(el('span','t','Saved'));
-  else b.setAttribute('aria-label', savedLabel(lastSavedAt));
-  b.title = (bad ? 'The last save failed. ' : quiet ? savedLabel(lastSavedAt) + '. ' : '') +
-    `Click or ${MODK}S to save now — ${dirHandle.name}/${PLANNER_FILE}` +
+  /* A failed write is the one case that still gets words. It is rare, it means
+     a year of plans isn't reaching the folder, and a silent square is the
+     wrong way to say so. */
+  if (storageState === 'error'){
+    const w = el('button','savepill warn');
+    w.appendChild(el('span','dot'));
+    w.appendChild(el('span','t','Not saving'));
+    w.title = `The last save failed. Click or ${MODK}S to try again — ` +
+              `${dirHandle.name}/${PLANNER_FILE}`;
+    w.onclick = saveNow;
+    return w;
+  }
+
+  const spinning = savePhase === 'spin' || storageState === 'saving';
+  const b = el('button','savepill ok dotonly');
+  /* Three things in one slot, all the same size: a quiet dot at rest, a
+     spinner while it writes, and a tick that draws itself in once the write
+     is through. Autosave uses the spinner too — it fires constantly, and its
+     old "Saving…" text was the most frequent cause of the bar moving. */
+  if (spinning) b.appendChild(el('span','spin'));
+  else if (savePhase === 'done') b.appendChild(icon('check','savecheck'));
+  else b.appendChild(el('span','dot'));
+  b.setAttribute('aria-label',
+    spinning ? 'Saving' : savePhase === 'done' ? 'Saved' : savedLabel(lastSavedAt));
+  b.title = (spinning ? 'Saving' : savedLabel(lastSavedAt)) +
+    `. Click or ${MODK}S to save now — ${dirHandle.name}/${PLANNER_FILE}` +
     (state.lastWrittenBy && state.lastWrittenBy !== MACHINE
       ? `\nLast written by ${state.lastWrittenBy}` : '');
   /* A status you can act on. Clicking a thing that says "Saved" and being
@@ -6262,17 +6295,31 @@ function folderStatusPill(){
 }
 
 /** Force a write this instant rather than waiting out the debounce. */
-let justSavedAt = 0;
+let savePhase = null;            // null | 'spin' | 'done'
+let savePhaseTimer = null;
 
+/**
+ * Writing to a local folder takes a few milliseconds, so a click on a healthy
+ * control had nothing to show for itself — it looked identical before and
+ * after. Spin while the write is in flight, hold that spin long enough to
+ * register, then draw the tick in once the write has actually landed.
+ */
 function saveNow(){
   if (!dirHandle) return exportJson();
   clearTimeout(saveTimer);
-  /* Even when there is nothing to write, the click gets an answer. */
+  clearTimeout(savePhaseTimer);          // a second click restarts, never stacks
+  const started = Date.now();
+  savePhase = 'spin';
+  paintStorageBadge(true);
   Promise.resolve(flushToFolder()).then(() => {
-    if (storageState === 'error') return;
-    justSavedAt = Date.now();
-    paintStorageBadge();
-    setTimeout(paintStorageBadge, 1650);
+    /* Never confirm a write that didn't happen. */
+    if (storageState === 'error'){ savePhase = null; return paintStorageBadge(true); }
+    const held = Math.max(0, 620 - (Date.now() - started));
+    savePhaseTimer = setTimeout(() => {
+      savePhase = 'done';
+      paintStorageBadge(true);
+      savePhaseTimer = setTimeout(() => { savePhase = null; paintStorageBadge(true); }, 1500);
+    }, held);
   });
 }
 
