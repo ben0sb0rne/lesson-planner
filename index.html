@@ -249,7 +249,9 @@ body.dragging *{cursor:grabbing!important}
 
 /* ── Attached files ───────────────────────────────────────────────── */
 .filescell{
-  display:flex; flex-wrap:wrap; align-content:flex-start; gap:4px;
+  /* One per line. Wrapped inline they read as a cloud of tags; stacked they
+     read as a list of things to open, which is what they are. */
+  display:flex; flex-direction:column; align-items:flex-start; gap:4px;
   min-height:var(--rowh); padding:7px 8px; border:1px solid var(--border);
   border-radius:var(--radius); background:var(--surface);
 }
@@ -4125,7 +4127,8 @@ function addCourse(){
   commit('Class added', () => {
     state.courses.push({
       id, name:'New class', color: PALETTE[state.courses.length % PALETTE.length],
-      weekdays:[...WEEKDAYS], rows: mkRows(['Homework Due','Opener','Procedure','Homework Assigned']),
+      weekdays:[...WEEKDAYS],
+      rows: mkRows(['Homework Due','Files','Opener','Procedure','Homework Assigned']),
       startDate: state.yearStart, endDate: state.yearEnd, terms:null,
       cancelled:[], weekRows:[], lessons:[],
     });
@@ -4395,8 +4398,11 @@ function renderClassEditor(p, c){
     chip.onclick = () => commit(v ? 'File attachments on' : 'File attachments off', () => {
       c.files = v;
       /* Same rule as homework: turning it on restores the row if it's gone,
-         turning it off leaves the row and everything attached alone. */
-      if (v && !findRow(c,'files')) c.rows.push({ id:uid(), label:'Files' });
+         turning it off leaves the row and everything attached alone. Second,
+         because what you're opening comes before what you're writing — and
+         drag it anywhere if that's wrong for a class. */
+      if (v && !findRow(c,'files'))
+        c.rows.splice(Math.min(1, c.rows.length), 0, { id:uid(), label:'Files' });
     });
     frow.appendChild(chip);
   });
