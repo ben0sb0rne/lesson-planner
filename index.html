@@ -247,6 +247,40 @@ body.dragging *{cursor:grabbing!important}
 .daycol.offday{display:block}
 .daycol.offday .offcol{height:100%}
 
+/* ── Attached files ───────────────────────────────────────────────── */
+.filescell{
+  display:flex; flex-wrap:wrap; align-content:flex-start; gap:4px;
+  min-height:var(--rowh); padding:7px 8px; border:1px solid var(--border);
+  border-radius:var(--radius); background:var(--surface);
+}
+.filescell:hover{border-color:var(--border-strong)}
+.filepill{
+  display:inline-flex; align-items:center; gap:5px; max-width:100%;
+  padding:3px 9px 3px 5px; border-radius:20px; border:1px solid var(--border-strong);
+  background:var(--surface); font-size:11.5px; color:var(--text); cursor:pointer;
+}
+.filepill:hover{border-color:var(--accent); color:var(--accent)}
+.filepill .fk{
+  flex:0 0 auto; min-width:19px; height:15px; padding:0 3px; border-radius:4px;
+  display:grid; place-items:center; font-size:8.5px; font-weight:800;
+  letter-spacing:.02em; color:#fff; background:var(--muted);
+}
+.filepill .fn{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+/* Colour by what it opens in, so the row scans without reading it. */
+.filepill.k-doc   .fk{background:#2563eb}
+.filepill.k-slide .fk{background:#d9541f}
+.filepill.k-sheet .fk{background:#12805c}
+.filepill.k-pdf   .fk{background:#c0322b}
+.filepill.k-image .fk{background:#7c3aed}
+.filepill.k-link  .fk{background:var(--faint)}
+/* Added on the other computer: the name is still useful, the click isn't. */
+.filepill.elsewhere{opacity:.5; border-style:dashed}
+.filepill.elsewhere:hover{border-color:var(--border-strong); color:var(--text)}
+.filepill.add{
+  padding:3px 10px; color:var(--faint); border-style:dashed; font-size:12px;
+}
+.filepill.add:hover{color:var(--accent); border-color:var(--accent); border-style:solid}
+
 /* ── Homework ─────────────────────────────────────────────────────── */
 .hwline{position:relative; padding-right:96px}
 .hwline::after{
@@ -1342,11 +1376,19 @@ const rowsFor = (course, date) =>
    ═══════════════════════════════════════════════════════════════════ */
 
 const HW_DUE = 'homework due', HW_ASSIGNED = 'homework assigned';
+const FILES_ROW = 'files';
 const rowRole = r => {
   const n = String(r.label || '').trim().toLowerCase();
-  return n === HW_DUE ? 'due' : n === HW_ASSIGNED ? 'assigned' : null;
+  return n === HW_DUE ? 'due' : n === HW_ASSIGNED ? 'assigned'
+       : n === FILES_ROW ? 'files' : null;
 };
 const findRow = (c, role) => c.rows.find(r => rowRole(r) === role) || null;
+
+/** Same shape as hwOn: the flag only ever turns it off. */
+function filesOn(c){
+  if (c.files === false) return false;
+  return !!findRow(c, 'files');
+}
 
 /** Undefined means "auto": on when both rows are present by name. */
 function hwOn(c){
@@ -1706,9 +1748,70 @@ function ensureLesson(course, idx){
 }
 const blankLesson = () => {
   const id = uid();
-  state.lessons[id] = { id, title:'', tag:'none', status:null, cells:{} };
+  state.lessons[id] = { id, title:'', tag:'none', status:null, cells:{}, files:[] };
   return id;
 };
+
+/* ── Attachments ─────────────────────────────────────────────────────────
+   A path, not a handle. The File System Access API never reveals where a file
+   is on disk, so a handle can only ever hand back a copy — and a copy is the
+   one thing that isn't wanted here. A path is also the only form the native
+   shell can act on.
+
+   Machine-scoped by consequence: /Users/… means nothing on the PC. The pill
+   records which computer it came from and says so rather than failing quietly.
+   ──────────────────────────────────────────────────────────────────────── */
+
+const filesOf = l => Array.isArray(l && l.files) ? l.files : [];
+
+const FILE_KIND = {
+  doc:   ['doc','docx','dot','dotx','rtf','odt','pages'],
+  slide: ['ppt','pptx','pps','ppsx','key','odp'],
+  sheet: ['xls','xlsx','csv','numbers','ods'],
+  pdf:   ['pdf'],
+  image: ['png','jpg','jpeg','gif','heic','webp','svg'],
+};
+function fileKind(f){
+  if (f.kind === 'link') return 'link';
+  const ext = (f.path || '').split('.').pop().toLowerCase();
+  for (const [k, list] of Object.entries(FILE_KIND)) if (list.includes(ext)) return k;
+  return 'file';
+}
+const FILE_GLYPH = { doc:'W', slide:'P', sheet:'X', pdf:'PDF', image:'IMG', file:'·', link:'↗' };
+
+/**
+ * Open an attachment.
+ *
+ * In the shell this is the real file in its real application. In a browser it
+ * cannot be — file:// is blocked from an https page and there is no way around
+ * it — so the path goes to the clipboard instead of pretending.
+ */
+async function openAttachment(f){
+  if (f.kind === 'link'){
+    /* A window, not a tab: a lesson plan open beside the thing it points at is
+       the whole point, and a tab buries one behind the other. */
+    const w = window.open(f.url, 'lp_' + f.id,
+      'popup=yes,noopener,width=1180,height=880,left=80,top=60');
+    if (!w) toast('Your browser blocked the window');
+    return;
+  }
+  if (SHELL){
+    try { await SHELL.open(f.path); }
+    catch(e){ toast(String(e).replace(/^Error:\s*/,'') || 'Could not open it'); }
+    return;
+  }
+  copyPathToClipboard(f.path);
+}
+
+function copyPathToClipboard(path){
+  const done = () => toast('Path copied — ⌘⇧G in Finder, then paste');
+  if (navigator.clipboard && navigator.clipboard.writeText)
+    return navigator.clipboard.writeText(path).then(done, () => toast(path));
+  const t = document.createElement('textarea');
+  t.value = path; document.body.appendChild(t); t.select();
+  try { document.execCommand('copy'); done(); } catch(e){ toast(path); }
+  t.remove();
+}
 
 /* ═══════════════════════════════════════════════════════════════════
    STRUCTURAL OPERATIONS — all of them array ops on course.lessons
@@ -1729,7 +1832,8 @@ const clearDay = (c, i) =>
 const duplicateDay = (c, i) =>
   commit('Day duplicated', () => {
     const src = state.lessons[c.lessons[i]], id = uid();
-    state.lessons[id] = { id, title:src.title, tag:src.tag, status:src.status || null, cells:clone(src.cells) };
+    state.lessons[id] = { id, title:src.title, tag:src.tag, status:src.status || null,
+                          cells:clone(src.cells), files:clone(filesOf(src)) };
     c.lessons.splice(i+1, 0, id);
   });
 
@@ -2271,6 +2375,102 @@ function makeAssignedCell(c, lesson, rowId, idx, dates){
 }
 
 /**
+ * The Files cell. Pills, and an add button — deliberately not contenteditable,
+ * because these are structured things rather than prose, and a stray keystroke
+ * shouldn't be able to half-delete one.
+ */
+function makeFilesCell(c, lesson, rowId, idx){
+  const wrap = el('div','filescell');
+  const list = filesOf(lesson);
+
+  list.forEach(f => {
+    const kind = fileKind(f);
+    const here = f.kind === 'link' || !f.machine || f.machine === MACHINE || !!SHELL;
+    const pill = el('button','filepill k-' + kind + (here ? '' : ' elsewhere'));
+    pill.appendChild(el('span','fk', FILE_GLYPH[kind]));
+    pill.appendChild(el('span','fn', f.label || (f.path || f.url || '').split('/').pop()));
+    pill.title = f.kind === 'link' ? f.url
+      : f.path + (here ? '' : `\n\nAdded on ${f.machine} — not on this computer`);
+    pill.onclick = e => { e.stopPropagation(); openAttachment(f); };
+    pill.oncontextmenu = e => { e.preventDefault(); e.stopPropagation();
+                                openAttachmentMenu(e, c, lesson, f); };
+    wrap.appendChild(pill);
+  });
+
+  const add = el('button','filepill add', '+');
+  add.title = 'Attach a file or a link';
+  add.onclick = e => { e.stopPropagation(); openAddAttachmentMenu(e, c, lesson); };
+  wrap.appendChild(add);
+  return wrap;
+}
+
+function openAttachmentMenu(e, c, lesson, f){
+  const m = $('menu'); m.innerHTML = '';
+  m.appendChild(el('div','sec', f.label || 'Attachment'));
+  menuItem(m, f.kind === 'link' ? 'Open in a window' : 'Open', () => openAttachment(f));
+  if (f.kind !== 'link'){
+    if (SHELL) menuItem(m, 'Show in Finder', () => SHELL.reveal(f.path).catch(
+      () => toast('Could not find it — has it moved?')));
+    menuItem(m, 'Copy path', () => copyPathToClipboard(f.path));
+  }
+  m.appendChild(document.createElement('hr'));
+  menuItem(m, 'Rename…', () => {
+    const v = prompt('Name for this attachment', f.label || '');
+    if (v == null) return;
+    commit('Attachment renamed', () => {
+      const t = filesOf(state.lessons[lesson.id]).find(x => x.id === f.id);
+      if (t) t.label = v.trim() || t.label;
+    });
+  });
+  menuItem(m, 'Remove', () => commit('Attachment removed', () => {
+    const l = state.lessons[lesson.id];
+    l.files = filesOf(l).filter(x => x.id !== f.id);
+  }), 'danger');
+  placeMenu(e);
+}
+
+function openAddAttachmentMenu(e, c, lesson){
+  const m = $('menu'); m.innerHTML = '';
+  m.appendChild(el('div','sec','Attach'));
+
+  const push = entry => commit('Attachment added', () => {
+    const l = state.lessons[lesson.id];
+    if (!Array.isArray(l.files)) l.files = [];
+    l.files.push(entry);
+  });
+
+  if (SHELL){
+    const pick = menuItem(m, 'Choose a file…', async () => {
+      const r = await SHELL.chooseFile().catch(() => null);
+      if (!r || !r.path) return;
+      push({ id:uid(), kind:'file', path:r.path, label:r.name, machine:MACHINE });
+    });
+    pick.classList.add('withico');
+    pick.insertBefore(icon('calendar','mico'), pick.firstChild);
+  }
+
+  menuItem(m, 'Paste a file path', () => {
+    const v = prompt(SHELL ? 'File path' :
+      'File path\n\n⌥⌘C copies one in Finder. Shift-right-click → Copy as path on Windows.');
+    if (!v) return;
+    const path = v.trim().replace(/^["']|["']$/g,'');
+    if (!/^([/~]|[A-Za-z]:[\\/])/.test(path)) return toast('That doesn\'t look like a file path');
+    push({ id:uid(), kind:'file', path, label:path.split(/[/\\]/).pop(), machine:MACHINE });
+  }, '', SHELL ? '' : 'Opening it needs the desktop app');
+
+  menuItem(m, 'Add a web link', () => {
+    const v = prompt('Web address', 'https://');
+    if (!v || v === 'https://') return;
+    let url = v.trim();
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    let label = url;
+    try { label = new URL(url).hostname.replace(/^www\./,''); } catch(err){}
+    push({ id:uid(), kind:'link', url, label });
+  });
+  placeMenu(e);
+}
+
+/**
  * The Homework Due cell. What arrives from elsewhere is rendered read-only
  * above the teacher's own notes, so it lives outside the contenteditable —
  * makeCell serializes innerHTML wholesale, and anything inside would become
@@ -2579,9 +2779,10 @@ function dayColumn(c, date, idx, hwDates, dueIdx){
   col.appendChild(head);
 
   rowsFor(c, date).forEach(r => {
-    const role = hwDates && rowRole(r);
-    const cell = role === 'assigned' ? makeAssignedCell(c, lesson, r.id, idx, hwDates)
-               : role === 'due'      ? makeDueCell(lesson, r.id, date, dueIdx)
+    const role = rowRole(r);
+    const cell = role === 'files' && filesOn(c) ? makeFilesCell(c, lesson, r.id, idx)
+               : hwDates && role === 'assigned' ? makeAssignedCell(c, lesson, r.id, idx, hwDates)
+               : hwDates && role === 'due'      ? makeDueCell(lesson, r.id, date, dueIdx)
                : makeCell(lesson, r.id);
     cell.oncontextmenu = e => { e.preventDefault(); openCellMenu(e, c, idx, r); };
     col.appendChild(cell);
@@ -2874,10 +3075,12 @@ function renderDay(stage){
   rowsFor(c, date).forEach(r => {
     const box = el('div','card');
     box.appendChild(el('div','lbl', r.label));
-    const role = hwDates && rowRole(r);
-    box.appendChild(role === 'assigned' ? makeAssignedCell(c, lesson, r.id, idx, hwDates)
-                  : role === 'due'      ? makeDueCell(lesson, r.id, date, dueIdx)
-                  : makeCell(lesson, r.id));
+    const role = rowRole(r);
+    box.appendChild(
+        role === 'files' && filesOn(c) ? makeFilesCell(c, lesson, r.id, idx)
+      : hwDates && role === 'assigned' ? makeAssignedCell(c, lesson, r.id, idx, hwDates)
+      : hwDates && role === 'due'      ? makeDueCell(lesson, r.id, date, dueIdx)
+      : makeCell(lesson, r.id));
     wrap.appendChild(box);
   });
   stage.appendChild(wrap);
@@ -4182,6 +4385,29 @@ function renderClassEditor(p, c){
     : 'Homework Due and Homework Assigned behave as ordinary rows. Turning this on restores either if it is missing.'));
   p.appendChild(hg2);
 
+  /* File attachments */
+  const fg = el('div','grp');
+  fg.appendChild(el('label','','File attachments'));
+  const frow = el('div','dayrow');
+  [[true,'On'],[false,'Off']].forEach(([v,lab]) => {
+    const chip = el('div','daychip' + (filesOn(c) === v ? ' on' : ''), lab);
+    chip.style.setProperty('--c','var(--accent)');
+    chip.onclick = () => commit(v ? 'File attachments on' : 'File attachments off', () => {
+      c.files = v;
+      /* Same rule as homework: turning it on restores the row if it's gone,
+         turning it off leaves the row and everything attached alone. */
+      if (v && !findRow(c,'files')) c.rows.push({ id:uid(), label:'Files' });
+    });
+    frow.appendChild(chip);
+  });
+  fg.appendChild(frow);
+  fg.appendChild(el('div','note', filesOn(c)
+    ? (SHELL ? 'The Files row holds documents and links. Clicking one opens it.'
+             : 'The Files row holds documents and links. Links open in a window; '
+             + 'opening a document needs the desktop app, so clicking one copies its path.')
+    : 'A row named Files holds documents and links instead of text. Turning this on adds it.'));
+  p.appendChild(fg);
+
   /* Rows */
   const rowsG = el('div','grp');
   rowsG.appendChild(el('label','','Rows'));
@@ -4438,6 +4664,8 @@ function rolloverYear(newStart, newEnd, keepIds){
       c.lessons.forEach(id => {
         const l = state.lessons[id]; if (!l) return;
         l.status = null;
+        /* Attachments carry: a path isn't year-specific, and last year's slides
+           are exactly what you want in front of you when planning this year. */
         Object.keys(l.cells).forEach(k => { l.cells[k] = scrubForReuse(l.cells[k]); });
       });
     });
@@ -5539,6 +5767,8 @@ function copyDayTo(from, idx, to, date){
     const dst = ensureLesson(to, tIdx);
     dst.title = src.title; dst.tag = src.tag; dst.status = src.status || null;
     dst.cells = Object.assign({}, dst.cells, moved);
+    /* Paths mean the same thing to any class on this machine. */
+    if (filesOf(src).length) dst.files = clone(filesOf(src));
   });
 }
 
@@ -5596,7 +5826,8 @@ function copySelection(){
       cells[key] = html;
       labels[key] = row.label;        // matching is normalised; reporting isn't
     });
-    days.push({ title: l ? l.title : '', tag: l ? (l.tag || 'none') : 'none', cells });
+    days.push({ title: l ? l.title : '', tag: l ? (l.tag || 'none') : 'none', cells,
+                files: clone(filesOf(l)) });
   }
   daysClip = { from: c.name, days, labels };
   clearSelection();
@@ -5620,7 +5851,7 @@ function pasteDays(c, at, mode){
       if (rid) cells[rid] = scrubForReuse(html);
       else missing.add((daysClip.labels && daysClip.labels[label]) || label);
     });
-    return { title:d.title, tag:d.tag, cells };
+    return { title:d.title, tag:d.tag, cells, files: clone(d.files || []) };
   });
 
   const n = built.length;
@@ -5630,7 +5861,8 @@ function pasteDays(c, at, mode){
   commit(`${n} day${n === 1 ? '' : 's'} ${mode === 'insert' ? 'inserted into' : 'pasted into'} ${c.name}${note}`, () => {
     const ids = built.map(b => {
       const id = uid();
-      state.lessons[id] = { id, title:b.title, tag:b.tag, status:null, cells:b.cells };
+      state.lessons[id] = { id, title:b.title, tag:b.tag, status:null,
+                            cells:b.cells, files:b.files || [] };
       return id;
     });
     if (mode === 'insert') c.lessons.splice(at, 0, ...ids);
