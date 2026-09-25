@@ -247,6 +247,92 @@ body.dragging *{cursor:grabbing!important}
 .daycol.offday{display:block}
 .daycol.offday .offcol{height:100%}
 
+/* ── Home ─────────────────────────────────────────────────────────── */
+.home{display:flex; flex-direction:column; gap:16px; max-width:1180px}
+.homehd h1{margin:0; font-size:22px; font-weight:650; letter-spacing:-.02em}
+.homehd .sub{margin-top:2px; font-size:13px; color:var(--muted)}
+.homecols{display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:20px}
+@media (max-width:900px){ .homecols{grid-template-columns:minmax(0,1fr)} }
+.homecol{display:flex; flex-direction:column; gap:8px; min-width:0}
+.homecol.side{gap:18px}
+.homelbl{
+  font-size:10.5px; font-weight:750; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--faint);
+}
+.homenote{font-size:13px; color:var(--muted); padding:2px 0}
+.homebox{display:flex; flex-direction:column; gap:5px; min-width:0}
+
+/* A class you're teaching today. Left rule in the class colour, so the four
+   read apart at a glance without four coloured backgrounds. */
+.homeclass{
+  display:block; width:100%; text-align:left; padding:10px 12px;
+  border:1px solid var(--border); border-left:3px solid var(--c);
+  background:var(--surface); cursor:pointer;
+}
+.homeclass:hover{border-color:var(--border-strong); border-left-color:var(--c)}
+.homeclass .top{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.homeclass .nm{font-size:14.5px; font-weight:620}
+.homeclass .ttl{font-size:13px; color:var(--muted); margin-top:3px}
+.homestatus{
+  font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+  color:var(--s); border:1px solid var(--s); border-radius:20px; padding:1px 7px;
+}
+.homefiles{display:flex; flex-direction:column; align-items:flex-start; gap:4px; margin-top:8px}
+.homedue{font-size:12px; color:var(--muted); margin-top:6px}
+.homeoff{
+  display:flex; align-items:center; gap:8px; padding:5px 12px;
+  font-size:12.5px; color:var(--faint);
+}
+.homeoff .dot{width:7px; height:7px; border-radius:50%; flex:0 0 auto}
+
+/* One line each in the side lists. Bordered rows, not cards — they're dense. */
+.homerow{
+  display:flex; align-items:baseline; gap:7px; width:100%; text-align:left;
+  padding:5px 6px; border-radius:6px; font-size:12.5px; min-width:0;
+}
+.homerow:hover{background:var(--surface-2)}
+.homerow .htag{
+  flex:0 0 auto; font-size:9px; font-weight:800; letter-spacing:.05em;
+  text-transform:uppercase; color:#fff; border-radius:20px; padding:1px 7px;
+}
+.homerow .htag.off{background:var(--faint)}
+.homerow .cdot{width:7px; height:7px; border-radius:50%; flex:0 0 auto}
+.homerow .what{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.homerow .when{margin-left:auto; flex:0 0 auto; color:var(--faint); white-space:nowrap}
+.homerow .when.bad{color:var(--danger,#dc2626)}
+.homerow .when.warn{color:var(--warn)}
+
+.homerem{display:flex; align-items:center; gap:8px; padding:3px 6px; font-size:12.5px}
+.homerem .rtext{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.homerem .rwhen{color:var(--faint); font-size:11.5px; white-space:nowrap}
+.homerem .rwhen.due{color:var(--warn); font-weight:650}
+.homerem.done .rtext{color:var(--faint); text-decoration:line-through}
+.rembox{
+  width:15px; height:15px; flex:0 0 auto; border:1.5px solid var(--border-strong);
+  border-radius:4px; display:grid; place-items:center; background:var(--surface);
+}
+.rembox:hover{border-color:var(--accent)}
+.homerem.done .rembox{background:var(--accent); border-color:var(--accent)}
+.remtick{width:11px; height:11px; fill:none; stroke:#fff; stroke-width:3;
+  stroke-linecap:round; stroke-linejoin:round}
+.remx{color:var(--faint); font-size:15px; opacity:0; flex:0 0 auto; padding:0 2px}
+.homerem:hover .remx{opacity:1}
+.remx:hover{color:#dc2626}
+.remadd{display:flex; gap:6px; margin-top:4px}
+.remadd input[type=text]{
+  flex:1; min-width:0; padding:5px 9px; border:1px solid var(--border);
+  border-radius:7px; background:var(--bg); outline:none; font-size:12.5px;
+}
+.remadd input[type=date]{
+  flex:0 0 auto; padding:5px 7px; border:1px solid var(--border);
+  border-radius:7px; background:var(--bg); outline:none; font-size:11.5px; color:var(--muted);
+}
+.remadd input:focus{border-color:var(--accent)}
+
+/* Home prints its own date, so the cluster that steps one hides there. */
+.tbleft.athome .navgrp,.tbleft.athome .period{display:none}
+.homebtn.on{background:color-mix(in srgb,var(--accent) 15%,transparent); color:var(--accent)}
+
 /* ── Attached files ───────────────────────────────────────────────── */
 .filescell{
   /* One per line. Wrapped inline they read as a cloud of tags; stacked they
@@ -1014,6 +1100,7 @@ body.hints .segmented .hint,body.hints #today .hint{
 
 <div class="topbar">
   <div class="tbleft">
+    <button class="ico homebtn" id="btnHome" title="Home" aria-label="Home"></button>
     <div class="navgrp">
       <button class="navbtn" id="prev" title="Previous">‹</button>
       <button class="navbtn" id="next" title="Next">›</button>
@@ -1317,9 +1404,10 @@ const mkRows = labels => labels.map(l => ({ id:uid(), label:l }));
 function emptyState(){
   const yearStart = '2026-08-24', yearEnd = '2027-06-04';
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     yearStart, yearEnd,
     archives: [],
+    reminders: [],
     weekCount: { from:'term', skipEmpty:true },
     terms: { mode:'semester', starts: spreadTerms(yearStart, yearEnd, 2) },
     holidays: [],
@@ -1345,7 +1433,7 @@ function load(){
 
 /** Bring older files forward.
     v1 = rotating cycle · v2 = weekdays · v3 = terms · v4 = archived years ·
-    v5 = week-numbering options. */
+    v5 = week-numbering options · v6 = reminders. */
 /** Rows this class shows only during a given calendar week. Pinned to dates,
     not to lesson positions — so nothing in the ripple engine has to know they
     exist, and inserting a day earlier leaves them on the week they were made
@@ -1525,6 +1613,12 @@ function migrate(data){
        first time it opens — a display change only, nothing moves. */
     data.weekCount = data.weekCount || { from:'term', skipEmpty:true };
     data.schemaVersion = 5;
+  }
+  /* Ascending, always: each step bumps the version, so an out-of-order block
+     makes every step below it unreachable. */
+  if (at() < 6){
+    data.reminders = data.reminders || [];
+    data.schemaVersion = 6;
   }
   return data;
 }
@@ -1867,7 +1961,17 @@ const restoreMeeting = (c, date) =>
    ═══════════════════════════════════════════════════════════════════ */
 
 state = load();
-ui = { view:'week', courseId: state.courses[0] ? state.courses[0].id : ALL, anchor:'' };
+/* 'home' is a destination, not a date range — it never appears in VIEWS, and
+   the switcher simply shows nothing selected while it's active. */
+ui = { view:'home', prevView:'week',
+       courseId: state.courses[0] ? state.courses[0].id : ALL, anchor:'' };
+
+/* Picking a class while on Home used to set courseId and re-render Home,
+   which ignores it — so the tab looked broken. Leaving Home is what a tab
+   means there, and it returns you to the view you came from. */
+function leaveHome(){
+  if (ui.view === 'home') ui.view = ui.prevView || 'week';
+}
 ui.anchor = todayAnchor();
 
 function clampToYear(d){
@@ -1902,6 +2006,7 @@ function render(){
   renderPeriod();
   const stage = $('stage');
   stage.innerHTML = '';
+  if (ui.view === 'home') return renderHome(stage);
   if (!state.courses.length) return renderFirstRun(stage);
   if (isAll()){
     ({ day:renderAllDay, week:renderAllWeek, month:renderAllMonth })[ui.view](stage);
@@ -1957,7 +2062,7 @@ function renderTabs(){
     /* The label was the widest thing in the row and the dots already say it. */
     t.title = 'All Classes';
     t.setAttribute('aria-label','All Classes');
-    t.onclick = () => { ui.courseId = ALL; render(); };
+    t.onclick = () => { ui.courseId = ALL; leaveHome(); render(); };
     box.appendChild(t);
   }
   state.courses.forEach((c, ci) => {
@@ -1967,7 +2072,7 @@ function renderTabs(){
     const name = el('span','nm', c.name);
     name.title = 'Double-click to rename · drag to reorder';
     t.appendChild(name);
-    t.onclick = () => { if (!name.isContentEditable){ ui.courseId = c.id; render(); } };
+    t.onclick = () => { if (!name.isContentEditable){ ui.courseId = c.id; leaveHome(); render(); } };
     t.ondblclick = e => { e.preventDefault(); renameTab(name, c); };
 
     /* Same shape as the row-label and editor-row reorders. The distinct mime
@@ -2063,6 +2168,13 @@ function todayOnScreen(){
 
 function renderPeriod(){
   const p = $('period'); p.innerHTML = '';
+  /* Home prints its own date, far more legibly, and the arrows would be
+     stepping something that isn't on screen. */
+  const home = ui.view === 'home';
+  document.querySelector('.tbleft').classList.toggle('athome', home);
+  $('btnHome').classList.toggle('on', home);
+  if (home){ $('today').style.display = 'none'; paintStorageBadge(); return; }
+
   const c = isAll() ? null : course();
   let lead = '', long = '', short = '';
 
@@ -2381,23 +2493,24 @@ function makeAssignedCell(c, lesson, rowId, idx, dates){
  * because these are structured things rather than prose, and a stray keystroke
  * shouldn't be able to half-delete one.
  */
+/** One attachment pill. Shared with Home, which shows them without the `+`. */
+function filePill(f, c, lesson){
+  const kind = fileKind(f);
+  const here = f.kind === 'link' || !f.machine || f.machine === MACHINE || !!SHELL;
+  const pill = el('button','filepill k-' + kind + (here ? '' : ' elsewhere'));
+  pill.appendChild(el('span','fk', FILE_GLYPH[kind]));
+  pill.appendChild(el('span','fn', f.label || (f.path || f.url || '').split('/').pop()));
+  pill.title = f.kind === 'link' ? f.url
+    : f.path + (here ? '' : `\n\nAdded on ${f.machine} — not on this computer`);
+  pill.onclick = e => { e.stopPropagation(); openAttachment(f); };
+  if (c) pill.oncontextmenu = e => { e.preventDefault(); e.stopPropagation();
+                                     openAttachmentMenu(e, c, lesson, f); };
+  return pill;
+}
+
 function makeFilesCell(c, lesson, rowId, idx){
   const wrap = el('div','filescell');
-  const list = filesOf(lesson);
-
-  list.forEach(f => {
-    const kind = fileKind(f);
-    const here = f.kind === 'link' || !f.machine || f.machine === MACHINE || !!SHELL;
-    const pill = el('button','filepill k-' + kind + (here ? '' : ' elsewhere'));
-    pill.appendChild(el('span','fk', FILE_GLYPH[kind]));
-    pill.appendChild(el('span','fn', f.label || (f.path || f.url || '').split('/').pop()));
-    pill.title = f.kind === 'link' ? f.url
-      : f.path + (here ? '' : `\n\nAdded on ${f.machine} — not on this computer`);
-    pill.onclick = e => { e.stopPropagation(); openAttachment(f); };
-    pill.oncontextmenu = e => { e.preventDefault(); e.stopPropagation();
-                                openAttachmentMenu(e, c, lesson, f); };
-    wrap.appendChild(pill);
-  });
+  filesOf(lesson).forEach(f => wrap.appendChild(filePill(f, c, lesson)));
 
   const add = el('button','filepill add', '+');
   add.title = 'Attach a file or a link';
@@ -3386,6 +3499,305 @@ function renderAllDay(stage){
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   HOME
+   ───────────────────────────────────────────────────────────────────
+   Not a class and not a date range, so it sits outside the tabs × views
+   grid. Everything on it is derived from what's already stored — the only
+   new thing is a reminder, which is the one kind of note no lesson row
+   has anywhere to put.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const remindersOf = () => Array.isArray(state.reminders) ? state.reminders : [];
+let reminderDraft = '';
+
+/** Today, or the next day that's actually on screen. Null outside the year —
+    in July, clamping into the year would present the first day of term as
+    though it were today. */
+function homeDate(){
+  const today = iso(new Date());
+  if (today < state.yearStart) return { date:null, when:'before' };
+  if (today > state.yearEnd)   return { date:null, when:'after' };
+  const d = todayAnchor();
+  return { date:d, when: d === today ? 'today' : 'next' };
+}
+
+function renderHome(stage){
+  const { date, when } = homeDate();
+  const wrap = el('div','home');
+
+  const hd = el('div','homehd');
+  if (date){
+    hd.appendChild(el('h1','', fmtDayLong(date)));
+    const meta = [];
+    if (when === 'next') meta.push('next school day');
+    const wl = weekLabel(date, null);
+    if (wl) meta.push(wl);
+    if (meta.length) hd.appendChild(el('div','sub', meta.join(' · ')));
+  } else {
+    hd.appendChild(el('h1','', when === 'before' ? 'Before the school year'
+                                                 : 'The school year has ended'));
+    hd.appendChild(el('div','sub', when === 'before'
+      ? `${state.yearStart} is the first day.`
+      : `It ran to ${fmtMedY(state.yearEnd)}. Start a new year in Settings → Advanced.`));
+  }
+  wrap.appendChild(hd);
+
+  if (!state.courses.length){
+    const es = el('div','empty-state');
+    es.appendChild(el('b','','No classes yet'));
+    es.appendChild(el('div','','Add your classes and this becomes your morning screen.'));
+    const cta = el('button','cta','+ Add a class');
+    cta.onclick = () => { openPanel(['classes']); setTimeout(addCourse, 60); };
+    es.appendChild(cta);
+    wrap.appendChild(es);
+    stage.appendChild(wrap);
+    return;
+  }
+
+  const cols = el('div','homecols');
+  cols.appendChild(homeToday(date));
+  cols.appendChild(homeSide(date));
+  wrap.appendChild(cols);
+  stage.appendChild(wrap);
+}
+
+/* ── left: what you're teaching ─────────────────────────────────────── */
+function homeToday(date){
+  const col = el('div','homecol');
+  col.appendChild(el('div','homelbl','Today'));
+
+  const hol = date && holidayOn(date);
+  if (!date || hol){
+    col.appendChild(el('div','homenote', hol ? `${hol.reason} — no school`
+                                             : 'Nothing scheduled.'));
+    return col;
+  }
+
+  let met = 0;
+  state.courses.forEach(c => {
+    const l = lessonOn(c, date);
+    if (!l){
+      const why = date < c.startDate ? 'not started yet'
+                : date > c.endDate   ? 'finished'
+                : 'doesn\u2019t meet today';
+      const line = el('div','homeoff');
+      const dot = el('span','dot'); dot.style.background = c.color;
+      line.appendChild(dot);
+      line.appendChild(el('span','', `${c.name} — ${why}`));
+      col.appendChild(line);
+      return;
+    }
+    met++;
+    const card = el('button','homeclass');
+    card.style.setProperty('--c', c.color);
+
+    const top = el('div','top');
+    top.appendChild(el('span','nm', c.name));
+    if (l.tag && l.tag !== 'none'){
+      const t = el('span','tagpill', TAGS[l.tag].label);
+      t.style.setProperty('--t', TAGS[l.tag].color);
+      top.appendChild(t);
+    }
+    const st = effectiveStatus(l, date);
+    /* Ready needs no chip — it's the absence of a problem. */
+    if (st && st !== 'ready'){
+      const chip = el('span','homestatus', STATUS[st].label);
+      chip.style.setProperty('--s', STATUS[st].color);
+      top.appendChild(chip);
+    }
+    card.appendChild(top);
+
+    if (l.title) card.appendChild(el('div','ttl', l.title));
+
+    const files = filesOf(l);
+    if (files.length){
+      const fr = el('div','homefiles');
+      files.forEach(f => fr.appendChild(filePill(f, c, l)));
+      card.appendChild(fr);
+    }
+
+    /* What lands in Homework Due today, from whichever earlier lesson set it. */
+    if (hwOn(c)){
+      const dates = meetingDates(c);
+      const due = buildDueIndex(c, dates).get(date) || [];
+      due.forEach(d => col && card.appendChild(
+        el('div','homedue', 'Due today: ' + d.text)));
+    }
+
+    card.onclick = () => { ui.courseId = c.id; ui.view = 'day'; ui.anchor = date; render(); };
+    col.appendChild(card);
+  });
+
+  if (!met) col.appendChild(el('div','homenote','No classes meet today.'));
+  return col;
+}
+
+/* ── right: what's coming, what's wrong, what you wrote down ─────────── */
+function homeSide(date){
+  const col = el('div','homecol side');
+  col.appendChild(homeComingUp(date));
+  col.appendChild(homeAttention(date));
+  col.appendChild(homeReminders(date));
+  return col;
+}
+
+const dayWord = n => n === 0 ? 'today' : n === 1 ? 'tomorrow' : `${n} days`;
+
+function homeComingUp(from){
+  const box = el('div','homebox');
+  box.appendChild(el('div','homelbl','Coming up'));
+  if (!from){ box.appendChild(el('div','homenote','\u2014')); return box; }
+
+  /* Reach further when the next fortnight happens to be quiet, rather than
+     showing an empty column for no reason. */
+  const gather = days => {
+    const until = addDays(from, days), out = [];
+    state.courses.forEach(c => {
+      /* Once per class, not once per day — meetingDates isn't memoised. */
+      meetingDates(c).forEach((d, i) => {
+        if (d <= from || d > until) return;
+        const l = state.lessons[c.lessons[i]];
+        if (!l || !l.tag || l.tag === 'none') return;
+        out.push({ date:d, kind:'tag', tag:l.tag, course:c, idx:i });
+      });
+    });
+    (state.holidays || []).forEach(h => {
+      if (h.date <= from || h.date > until) return;
+      out.push({ date:h.date, kind:'holiday', reason:h.reason });
+    });
+    return out.sort((a,b) => a.date < b.date ? -1 : 1);
+  };
+
+  let items = gather(14);
+  if (items.length < 3) items = gather(30);
+  if (!items.length){
+    box.appendChild(el('div','homenote','Nothing tagged in the next month.'));
+    return box;
+  }
+
+  items.slice(0, 7).forEach(it => {
+    const row = el('button','homerow');
+    if (it.kind === 'holiday'){
+      row.appendChild(el('span','htag off','Off'));
+      row.appendChild(el('span','what', it.reason));
+    } else {
+      const t = el('span','htag', TAGS[it.tag].label);
+      t.style.background = TAGS[it.tag].color;
+      row.appendChild(t);
+      row.appendChild(el('span','what', it.course.name));
+      row.onclick = () => { ui.courseId = it.course.id; ui.view = 'day';
+                            ui.anchor = it.date; render(); };
+    }
+    row.appendChild(el('span','when',
+      `${fmtMed(it.date)} · ${dayWord(dayDiff(it.date, from))}`));
+    box.appendChild(row);
+  });
+  return box;
+}
+
+function homeAttention(from){
+  const box = el('div','homebox');
+  box.appendChild(el('div','homelbl','Needs attention'));
+  if (!from){ box.appendChild(el('div','homenote','\u2014')); return box; }
+
+  const rows = [];
+  state.courses.forEach(c => {
+    const dates = meetingDates(c);
+    let unplanned = 0, waiting = null;
+    dates.forEach((d, i) => {
+      if (d < from) return;
+      const l = state.lessons[c.lessons[i]];
+      const st = effectiveStatus(l, d);
+      if (st === 'unplanned') unplanned++;
+      if (st === 'waiting' && !waiting) waiting = d;
+    });
+    if (unplanned) rows.push({ c, text:`${unplanned} day${unplanned>1?'s':''} unplanned`,
+                               tone:'bad', date: null });
+    if (waiting)  rows.push({ c, text:`waiting on materials · ${fmtMed(waiting)}`,
+                              tone:'warn', date: waiting });
+  });
+
+  if (!rows.length){
+    box.appendChild(el('div','homenote','Everything ahead is planned.'));
+    return box;
+  }
+  rows.forEach(r => {
+    const row = el('button','homerow');
+    const dot = el('span','cdot'); dot.style.background = r.c.color;
+    row.appendChild(dot);
+    row.appendChild(el('span','what', r.c.name));
+    row.appendChild(el('span','when ' + r.tone, r.text));
+    row.onclick = () => { ui.courseId = r.c.id; ui.view = r.date ? 'day' : 'week';
+                          if (r.date) ui.anchor = r.date; render(); };
+    box.appendChild(row);
+  });
+  return box;
+}
+
+function homeReminders(from){
+  const box = el('div','homebox');
+  const hd = el('div','homelbl','Reminders');
+  box.appendChild(hd);
+
+  const list = remindersOf().slice().sort((a,b) => {
+    if (!!a.done !== !!b.done) return a.done ? 1 : -1;
+    return (a.date || '9999') < (b.date || '9999') ? -1 : 1;
+  });
+
+  list.forEach(r => {
+    const row = el('div','homerem' + (r.done ? ' done' : ''));
+    const box2 = el('button','rembox');
+    box2.setAttribute('aria-label', r.done ? 'Mark not done' : 'Mark done');
+    if (r.done) box2.appendChild(icon('check','remtick'));
+    box2.onclick = () => commit(r.done ? 'Reminder reopened' : 'Reminder done', () => {
+      const t = remindersOf().find(x => x.id === r.id);
+      if (t) t.done = !t.done;
+    });
+    row.appendChild(box2);
+    row.appendChild(el('span','rtext', r.text));
+    if (r.date){
+      const late = from && r.date < from, now = from && r.date === from;
+      row.appendChild(el('span','rwhen' + (!r.done && (late || now) ? ' due' : ''),
+        late ? 'overdue' : now ? 'today' : fmtMed(r.date)));
+    }
+    const x = el('button','remx','×');
+    x.title = 'Remove';
+    x.onclick = () => commit('Reminder removed', () => {
+      state.reminders = remindersOf().filter(x2 => x2.id !== r.id);
+    });
+    row.appendChild(x);
+    box.appendChild(row);
+  });
+
+  /* Not bound to state until Enter: commit() re-renders the stage, which
+     would tear the input out from under the caret on every keystroke. */
+  const add = el('div','remadd');
+  const inp = document.createElement('input');
+  inp.type = 'text';
+  inp.placeholder = 'Add a reminder';
+  inp.value = reminderDraft;
+  inp.oninput = () => { reminderDraft = inp.value; };
+  const dt = document.createElement('input');
+  dt.type = 'date';
+  dt.title = 'When (optional)';
+  const submit = () => {
+    const text = inp.value.trim();
+    if (!text) return;
+    const date = dt.value || null;
+    reminderDraft = '';
+    commit('Reminder added', () => {
+      if (!Array.isArray(state.reminders)) state.reminders = [];
+      state.reminders.push({ id:uid(), text, date, done:false });
+    });
+  };
+  inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); submit(); } };
+  dt.onkeydown  = e => { if (e.key === 'Enter'){ e.preventDefault(); submit(); } };
+  add.appendChild(inp); add.appendChild(dt);
+  box.appendChild(add);
+  return box;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    MENUS
    ═══════════════════════════════════════════════════════════════════ */
 
@@ -3689,6 +4101,8 @@ function cmdChecklist(){
     The calendar is the logo's own — a card, a header bar and its date cells —
     so the app never has to reach for an emoji. */
 const ICONS = {
+  home:     '<path d="M4 10.5 12 4l8 6.5"/>' +
+            '<path d="M6 9.8V19a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9.8"/>',
   calendar: '<rect x="3.5" y="4.5" width="17" height="16" rx="2.5"/>' +
             '<path d="M3.5 9h17M8 2.8v3.4M16 2.8v3.4"/>' +
             '<rect x="7" y="12" width="3.4" height="3" rx="1"/>' +
@@ -4659,6 +5073,7 @@ function rolloverYear(newStart, newEnd, keepIds){
     /* Next year's breaks are genuinely different dates — carrying them would
        silently shift every class onto days off that no longer exist. */
     state.holidays = [];
+    state.reminders = [];          // dated to the year that just ended
 
     state.courses.forEach(c => {
       c.startDate = newStart; c.endDate = newEnd;
@@ -6726,6 +7141,14 @@ $('prev').onclick = () => step(-1);
 $('next').onclick = () => step(1);
 $('today').onclick = () => { ui.anchor = todayAnchor(); render(); };
 $('btnMore').onclick = openMoreMenu;
+$('btnHome').appendChild(icon('home'));
+$('btnHome').onclick = () => {
+  if (ui.view === 'home') return;
+  ui.prevView = ui.view;              // so a tab can put you back where you were
+  ui.view = 'home';
+  render();
+};
+
 $('period').onclick = () => {
   const m = $('menu');
   if (m.classList.contains('on') && m.classList.contains('cal')) return closeMenu();
